@@ -1,21 +1,15 @@
 import bcrypt from 'bcrypt'
 import { Room, Client, ServerError } from 'colyseus'
 import { Dispatcher } from '@colyseus/command'
-import { Player, OfficeState, Computer, Whiteboard } from './schema/OfficeState'
+import { Player, OfficeState, Computer } from './schema/OfficeState'
 import { Message } from '../../types/Messages'
 import { IRoomData } from '../../types/Rooms'
-import { whiteboardRoomIds } from './schema/OfficeState'
 import PlayerUpdateCommand from './commands/PlayerUpdateCommand'
 import PlayerUpdateNameCommand from './commands/PlayerUpdateNameCommand'
 import {
   ComputerAddUserCommand,
   ComputerRemoveUserCommand,
 } from './commands/ComputerUpdateArrayCommand'
-import {
-  WhiteboardAddUserCommand,
-  WhiteboardRemoveUserCommand,
-} from './commands/WhiteboardUpdateArrayCommand'
-import ChatMessageUpdateCommand from './commands/ChatMessageUpdateCommand'
 
 export class SkyOffice extends Room<OfficeState> {
   private dispatcher = new Dispatcher(this)
@@ -42,11 +36,6 @@ export class SkyOffice extends Room<OfficeState> {
     // HARD-CODED: Add 5 computers in a room
     for (let i = 0; i < 5; i++) {
       this.state.computers.set(String(i), new Computer())
-    }
-
-    // HARD-CODED: Add 3 whiteboards in a room
-    for (let i = 0; i < 3; i++) {
-      this.state.whiteboards.set(String(i), new Whiteboard())
     }
 
     // when a player connect to a computer, add to the computer connectedUser array
@@ -76,25 +65,6 @@ export class SkyOffice extends Room<OfficeState> {
         })
       })
     })
-
-    // when a player connect to a whiteboard, add to the whiteboard connectedUser array
-    this.onMessage(Message.CONNECT_TO_WHITEBOARD, (client, message: { whiteboardId: string }) => {
-      this.dispatcher.dispatch(new WhiteboardAddUserCommand(), {
-        client,
-        whiteboardId: message.whiteboardId,
-      })
-    })
-
-    // when a player disconnect from a whiteboard, remove from the whiteboard connectedUser array
-    this.onMessage(
-      Message.DISCONNECT_FROM_WHITEBOARD,
-      (client, message: { whiteboardId: string }) => {
-        this.dispatcher.dispatch(new WhiteboardRemoveUserCommand(), {
-          client,
-          whiteboardId: message.whiteboardId,
-        })
-      }
-    )
 
     // when receiving updatePlayer message, call the PlayerUpdateCommand
     this.onMessage(
@@ -137,26 +107,13 @@ export class SkyOffice extends Room<OfficeState> {
         }
       })
     })
-
-    // when a player send a chat message, update the message array and broadcast to all connected clients except the sender
-    this.onMessage(Message.ADD_CHAT_MESSAGE, (client, message: { content: string }) => {
-      // update the message array (so that players join later can also see the message)
-      this.dispatcher.dispatch(new ChatMessageUpdateCommand(), {
-        client,
-        content: message.content,
-      })
-
-      // broadcast to all currently connected clients except the sender (to render in-game dialog on top of the character)
-      this.broadcast(
-        Message.ADD_CHAT_MESSAGE,
-        { clientId: client.sessionId, content: message.content },
-        { except: client }
-      )
-    })
   }
 
   async onAuth(client: Client, options: { password: string | null }) {
     if (this.password) {
+      if (!options.password) {
+        throw new ServerError(403, 'Password is required!')
+      }
       const validPassword = await bcrypt.compare(options.password, this.password)
       if (!validPassword) {
         throw new ServerError(403, 'Password is incorrect!')
@@ -183,18 +140,9 @@ export class SkyOffice extends Room<OfficeState> {
         computer.connectedUser.delete(client.sessionId)
       }
     })
-    this.state.whiteboards.forEach((whiteboard) => {
-      if (whiteboard.connectedUser.has(client.sessionId)) {
-        whiteboard.connectedUser.delete(client.sessionId)
-      }
-    })
   }
 
   onDispose() {
-    this.state.whiteboards.forEach((whiteboard) => {
-      if (whiteboardRoomIds.has(whiteboard.roomId)) whiteboardRoomIds.delete(whiteboard.roomId)
-    })
-
     console.log('room', this.roomId, 'disposing...')
     this.dispatcher.stop()
   }

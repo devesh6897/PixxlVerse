@@ -38,6 +38,7 @@ export default class OtherPlayer extends Player {
       myPlayer.readyToConnect &&
       this.readyToConnect &&
       myPlayer.videoConnected &&
+      webRTC &&
       myPlayerId > this.playerId
     ) {
       webRTC.connectToNewUser(this.playerId)
@@ -95,6 +96,15 @@ export default class OtherPlayer extends Player {
   /** preUpdate is called every frame for every game object. */
   preUpdate(t: number, dt: number) {
     super.preUpdate(t, dt)
+
+    // Update connection buffer time for video calls
+    if (this.myPlayer && this.myPlayer.readyToConnect && this.readyToConnect && !this.connected) {
+      this.connectionBufferTime += dt;
+      // Add debug logging every second
+      if (Math.floor(this.connectionBufferTime / 1000) !== Math.floor((this.connectionBufferTime - dt) / 1000)) {
+        console.log(`Connection buffer time for ${this.playerId}: ${this.connectionBufferTime}ms`);
+      }
+    }
 
     // if Phaser has not updated the canvas (when the game tab is not active) for more than 1 sec
     // directly snap player to their current locations

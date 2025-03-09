@@ -17,11 +17,11 @@ export default class WebRTC {
     const sanitizedId = this.replaceInvalidId(userId)
     this.myPeer = new Peer(sanitizedId)
     this.network = network
-    console.log('userId:', userId)
+    console.log('WebRTC initialized with userId:', userId)
     console.log('sanitizedId:', sanitizedId)
     this.myPeer.on('error', (err) => {
-      console.log(err.type)
-      console.error(err)
+      console.log('PeerJS error:', err.type)
+      console.error('PeerJS error details:', err)
     })
 
     // mute your own video stream (you don't want to hear yourself)
@@ -61,6 +61,7 @@ export default class WebRTC {
   }
 
   getUserMedia(alertOnError = true) {
+    console.log('Attempting to get user media...')
     // ask the browser to get user media
     navigator.mediaDevices
       ?.getUserMedia({
@@ -68,6 +69,7 @@ export default class WebRTC {
         audio: true,
       })
       .then((stream) => {
+        console.log('User media obtained successfully')
         this.myStream = stream
         this.addVideoStream(this.myVideo, this.myStream)
         this.setUpButtons()
@@ -75,26 +77,31 @@ export default class WebRTC {
         this.network.videoConnected()
       })
       .catch((error) => {
+        console.error('Error getting user media:', error)
         if (alertOnError) window.alert('No webcam or microphone found, or permission is blocked')
       })
   }
 
   // method to call a peer
   connectToNewUser(userId: string) {
+    console.log('Attempting to connect to user:', userId)
     if (this.myStream) {
       const sanitizedId = this.replaceInvalidId(userId)
       if (!this.peers.has(sanitizedId)) {
-        console.log('calling', sanitizedId)
+        console.log('Calling peer:', sanitizedId)
         const call = this.myPeer.call(sanitizedId, this.myStream)
         const video = document.createElement('video')
         this.peers.set(sanitizedId, { call, video })
 
         call.on('stream', (userVideoStream) => {
+          console.log('Received stream from user:', sanitizedId)
           this.addVideoStream(video, userVideoStream)
         })
 
         // on close is triggered manually with deleteVideoStream()
       }
+    } else {
+      console.warn('Cannot connect to user - no local stream available')
     }
   }
 

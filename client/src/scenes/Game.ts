@@ -6,7 +6,6 @@ import { createCharacterAnims } from '../anims/CharacterAnims'
 import Item from '../items/Item'
 import Chair from '../items/Chair'
 import Computer from '../items/Computer'
-import Whiteboard from '../items/Whiteboard'
 import VendingMachine from '../items/VendingMachine'
 import '../characters/MyPlayer'
 import '../characters/OtherPlayer'
@@ -19,7 +18,6 @@ import { PlayerBehavior } from '../../../types/PlayerBehavior'
 import { ItemType } from '../../../types/Items'
 
 import store from '../stores'
-import { setFocused, setShowChat } from '../stores/ChatStore'
 import { NavKeys, Keyboard } from '../../../types/KeyboardState'
 
 export default class Game extends Phaser.Scene {
@@ -33,7 +31,6 @@ export default class Game extends Phaser.Scene {
   private otherPlayers!: Phaser.Physics.Arcade.Group
   private otherPlayerMap = new Map<string, OtherPlayer>()
   computerMap = new Map<string, Computer>()
-  private whiteboardMap = new Map<string, Whiteboard>()
 
   constructor() {
     super('game')
@@ -49,13 +46,6 @@ export default class Game extends Phaser.Scene {
     this.keyE = this.input.keyboard.addKey('E')
     this.keyR = this.input.keyboard.addKey('R')
     this.input.keyboard.disableGlobalCapture()
-    this.input.keyboard.on('keydown-ENTER', (event) => {
-      store.dispatch(setShowChat(true))
-      store.dispatch(setFocused(true))
-    })
-    this.input.keyboard.on('keydown-ESC', (event) => {
-      store.dispatch(setShowChat(false))
-    })
   }
 
   disableKeys() {
@@ -106,21 +96,6 @@ export default class Game extends Phaser.Scene {
       this.computerMap.set(id, item)
     })
 
-    // import whiteboards objects from Tiled map to Phaser
-    const whiteboards = this.physics.add.staticGroup({ classType: Whiteboard })
-    const whiteboardLayer = this.map.getObjectLayer('Whiteboard')
-    whiteboardLayer.objects.forEach((obj, i) => {
-      const item = this.addObjectFromTiled(
-        whiteboards,
-        obj,
-        'whiteboards',
-        'whiteboard'
-      ) as Whiteboard
-      const id = `${i}`
-      item.id = id
-      this.whiteboardMap.set(id, item)
-    })
-
     // import vending machine objects from Tiled map to Phaser
     const vendingMachines = this.physics.add.staticGroup({ classType: VendingMachine })
     const vendingMachineLayer = this.map.getObjectLayer('VendingMachine')
@@ -146,7 +121,7 @@ export default class Game extends Phaser.Scene {
 
     this.physics.add.overlap(
       this.playerSelector,
-      [chairs, computers, whiteboards, vendingMachines],
+      [chairs, computers, vendingMachines],
       this.handleItemSelectorOverlap,
       undefined,
       this
@@ -168,7 +143,6 @@ export default class Game extends Phaser.Scene {
     this.network.onPlayerUpdated(this.handlePlayerUpdated, this)
     this.network.onItemUserAdded(this.handleItemUserAdded, this)
     this.network.onItemUserRemoved(this.handleItemUserRemoved, this)
-    this.network.onChatMessageAdded(this.handleChatMessageAdded, this)
   }
 
   private handleItemSelectorOverlap(playerSelector, selectionItem) {
@@ -253,16 +227,15 @@ export default class Game extends Phaser.Scene {
   }
 
   private handlePlayersOverlap(myPlayer, otherPlayer) {
-    otherPlayer.makeCall(myPlayer, this.network?.webRTC)
+    console.log(`Players overlap detected: myPlayer=${myPlayer.playerId}, otherPlayer=${otherPlayer.playerId}`);
+    console.log(`Player states: myReady=${myPlayer.readyToConnect}, otherReady=${otherPlayer.readyToConnect}, myVideo=${myPlayer.videoConnected}`);
+    otherPlayer.makeCall(myPlayer, this.network?.webRTC);
   }
 
   private handleItemUserAdded(playerId: string, itemId: string, itemType: ItemType) {
     if (itemType === ItemType.COMPUTER) {
       const computer = this.computerMap.get(itemId)
       computer?.addCurrentUser(playerId)
-    } else if (itemType === ItemType.WHITEBOARD) {
-      const whiteboard = this.whiteboardMap.get(itemId)
-      whiteboard?.addCurrentUser(playerId)
     }
   }
 
@@ -270,15 +243,7 @@ export default class Game extends Phaser.Scene {
     if (itemType === ItemType.COMPUTER) {
       const computer = this.computerMap.get(itemId)
       computer?.removeCurrentUser(playerId)
-    } else if (itemType === ItemType.WHITEBOARD) {
-      const whiteboard = this.whiteboardMap.get(itemId)
-      whiteboard?.removeCurrentUser(playerId)
     }
-  }
-
-  private handleChatMessageAdded(playerId: string, content: string) {
-    const otherPlayer = this.otherPlayerMap.get(playerId)
-    otherPlayer?.updateDialogBubble(content)
   }
 
   update(t: number, dt: number) {
