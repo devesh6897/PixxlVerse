@@ -5,10 +5,12 @@ import { setVideoConnected } from '../stores/UserStore'
 
 export default class WebRTC {
   private myPeer: Peer
-  private peers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
-  private onCalledPeers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
+  private peers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement; container: HTMLDivElement; usernameEl: HTMLDivElement }>()
+  private onCalledPeers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement; container: HTMLDivElement; usernameEl: HTMLDivElement }>()
   private videoGrid = document.querySelector('.video-grid')
   private myVideo = document.createElement('video')
+  private myVideoContainer = document.createElement('div')
+  private myUsernameEl = document.createElement('div')
   private myStream?: MediaStream
   private network: Network
 
@@ -17,6 +19,11 @@ export default class WebRTC {
     this.myPeer = new Peer(sanitizedId)
     this.network = network
     this.videoGrid = document.querySelector('.video-grid')
+    
+    // Set up my video container and username display
+    this.myVideoContainer.className = 'video-container'
+    this.myUsernameEl.className = 'video-username'
+    this.myUsernameEl.textContent = 'You'
     
     console.log('WebRTC initialized with userId:', userId)
     console.log('sanitizedId:', sanitizedId)
@@ -44,13 +51,40 @@ export default class WebRTC {
       if (!this.onCalledPeers.has(call.peer)) {
         call.answer(this.myStream)
         const video = document.createElement('video')
-        this.onCalledPeers.set(call.peer, { call, video })
+        
+        // Create container and username element
+        const container = document.createElement('div')
+        container.className = 'video-container'
+        
+        const usernameEl = document.createElement('div')
+        usernameEl.className = 'video-username'
+        
+        // Get username from store if possible
+        const state = store.getState()
+        const username = state.user.playerNameMap.get(call.peer) || 'Peer'
+        usernameEl.textContent = username
+        
+        // Add to map with new structure
+        this.onCalledPeers.set(call.peer, { call, video, container, usernameEl })
 
         call.on('stream', (userVideoStream) => {
-          this.addVideoStream(video, userVideoStream)
+          // Add video and container elements to DOM
+          container.appendChild(video)
+          container.appendChild(usernameEl)
+          
+          video.srcObject = userVideoStream
+          video.playsInline = true
+          video.className = 'video-element'
+          video.addEventListener('loadedmetadata', () => {
+            video.play()
+          })
+          
+          if (this.videoGrid) {
+            (this.videoGrid as HTMLElement).style.display = 'flex'
+            this.videoGrid.appendChild(container)
+          }
         })
       }
-      // on close is triggered manually with deleteOnCalledVideoStream()
     })
   }
 
@@ -73,7 +107,39 @@ export default class WebRTC {
       .then((stream) => {
         console.log('User media obtained successfully')
         this.myStream = stream
-        this.addVideoStream(this.myVideo, this.myStream)
+        
+        // Set up container with video and username
+        this.myVideoContainer = document.createElement('div')
+        this.myVideoContainer.className = 'video-container'
+        
+        this.myUsernameEl = document.createElement('div')
+        this.myUsernameEl.className = 'video-username'
+        
+        // Get my name from store if possible
+        const state = store.getState()
+        const mySessionId = state.user.sessionId
+        const myName = state.user.playerNameMap.get(mySessionId) || 'You'
+        this.myUsernameEl.textContent = myName
+        
+        // Add video to container
+        this.myVideoContainer.appendChild(this.myVideo)
+        this.myVideoContainer.appendChild(this.myUsernameEl)
+        
+        // Add the video
+        this.myVideo.srcObject = stream
+        this.myVideo.playsInline = true
+        this.myVideo.className = 'video-element'
+        this.myVideo.muted = true
+        this.myVideo.addEventListener('loadedmetadata', () => {
+          this.myVideo.play()
+        })
+        
+        // Add container to grid
+        if (this.videoGrid) {
+          (this.videoGrid as HTMLElement).style.display = 'flex'
+          this.videoGrid.appendChild(this.myVideoContainer)
+        }
+        
         store.dispatch(setVideoConnected(true))
         this.network.videoConnected()
       })
@@ -91,48 +157,32 @@ export default class WebRTC {
       if (!this.peers.has(sanitizedId)) {
         console.log('Calling peer:', sanitizedId)
         const call = this.myPeer.call(sanitizedId, this.myStream)
+        
+        // Get the username from the Redux store
+        const state = store.getState()
+        const username = state.user.playerNameMap.get(sanitizedId) || sanitizedId
+        
+        // Create video element and container
         const video = document.createElement('video')
-        this.peers.set(sanitizedId, { call, video })
+        const container = document.createElement('div')
+        container.className = 'video-container'
+        
+        // Create username element
+        const usernameEl = document.createElement('div')
+        usernameEl.className = 'video-username'
+        usernameEl.textContent = username
+        
+        // Store the elements
+        this.peers.set(sanitizedId, { call, video, container, usernameEl })
 
         call.on('stream', (userVideoStream) => {
           console.log('Received stream from user:', sanitizedId)
-          this.addVideoStream(video, userVideoStream)
+          this.addPeerVideoStream(video, userVideoStream, sanitizedId, container, usernameEl)
         })
-
-        // on close is triggered manually with deleteVideoStream()
       }
     } else {
       console.warn('Cannot connect to user - no local stream available')
     }
-  }
-
-  // method to add new video stream to videoGrid div
-  addVideoStream(video: HTMLVideoElement, stream: MediaStream) {
-    video.srcObject = stream
-    video.playsInline = true
-    video.className = 'video-element'
-    video.addEventListener('loadedmetadata', () => {
-      video.play()
-    })
-    
-    if (this.videoGrid) {
-      // Ensure the video grid is visible
-      (this.videoGrid as HTMLElement).style.display = 'flex'
-      this.videoGrid.append(video)
-      
-      console.log(`Video added to grid. Total videos: ${this.videoGrid.children.length}`)
-      
-      // Center the videos in the container
-      this.updateVideoGridLayout()
-    }
-  }
-
-  // New method to update video grid layout
-  private updateVideoGridLayout() {
-    if (!this.videoGrid) return
-    
-    const totalVideos = this.videoGrid.children.length
-    console.log(`Updating video grid layout. Total videos: ${totalVideos}`)
   }
 
   // method to remove video stream (when we are the host of the call)
@@ -141,7 +191,7 @@ export default class WebRTC {
     if (this.peers.has(sanitizedId)) {
       const peer = this.peers.get(sanitizedId)
       peer?.call.close()
-      peer?.video.remove()
+      peer?.container.remove() // Remove the whole container instead of just the video
       this.peers.delete(sanitizedId)
     }
   }
@@ -152,7 +202,7 @@ export default class WebRTC {
     if (this.onCalledPeers.has(sanitizedId)) {
       const onCalledPeer = this.onCalledPeers.get(sanitizedId)
       onCalledPeer?.call.close()
-      onCalledPeer?.video.remove()
+      onCalledPeer?.container.remove() // Remove the whole container instead of just the video
       this.onCalledPeers.delete(sanitizedId)
     }
   }
@@ -182,21 +232,16 @@ export default class WebRTC {
         console.log(`Video ${enabled ? 'enabled' : 'disabled'}`)
         
         // If turning off video, only hide my own video
-        if (!enabled) {
-          // Hide my video
-          if (this.myVideo && this.myVideo.parentElement) {
-            (this.myVideo as HTMLElement).style.display = 'none';
-          }
-        } else {
-          // Show my video again
-          if (this.myVideo && this.myVideo.parentElement) {
-            (this.myVideo as HTMLElement).style.display = 'block';
-          }
+        if (!enabled && this.myVideo) {
+          this.myVideo.style.display = 'none';
+        } else if (this.myVideo) {
+          this.myVideo.style.display = 'block';
         }
         
         // Make sure the video grid is still visible if there are other videos
         if (this.videoGrid && this.videoGrid.children.length > 1) {
-          (this.videoGrid as HTMLElement).style.display = 'flex';
+          const gridElement = this.videoGrid as HTMLElement;
+          gridElement.style.display = 'flex';
         }
       }
     }
@@ -209,5 +254,42 @@ export default class WebRTC {
       this.myStream.getVideoTracks().length > 0 && 
       this.myStream.getVideoTracks()[0].enabled
     )
+  }
+
+  // Add video stream for peers with username
+  addPeerVideoStream(video: HTMLVideoElement, stream: MediaStream, userId: string, container: HTMLDivElement, usernameEl: HTMLDivElement) {
+    video.srcObject = stream
+    video.playsInline = true
+    video.className = 'video-element'
+    video.addEventListener('loadedmetadata', () => {
+      video.play()
+    })
+    
+    // Get username from Redux store
+    const state = store.getState()
+    const username = state.user.playerNameMap.get(userId) || userId
+    usernameEl.textContent = username
+    
+    // Add video and username to container
+    container.appendChild(video)
+    container.appendChild(usernameEl)
+    
+    if (this.videoGrid) {
+      // Ensure the video grid is visible
+      const gridElement = this.videoGrid as HTMLElement;
+      gridElement.style.display = 'flex'
+      this.videoGrid.appendChild(container)
+      
+      console.log(`Peer video added to grid for: ${username}. Total videos: ${this.videoGrid.children.length}`)
+      this.updateVideoGridLayout()
+    }
+  }
+
+  // New method to update video grid layout
+  private updateVideoGridLayout() {
+    if (!this.videoGrid) return
+    
+    const totalVideos = this.videoGrid.children.length
+    console.log(`Updating video grid layout. Total videos: ${totalVideos}`)
   }
 }
