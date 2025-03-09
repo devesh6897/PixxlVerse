@@ -8,7 +8,6 @@ export default class WebRTC {
   private peers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
   private onCalledPeers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
   private videoGrid = document.querySelector('.video-grid')
-  private buttonGrid = document.querySelector('.button-grid')
   private myVideo = document.createElement('video')
   private myStream?: MediaStream
   private network: Network
@@ -17,8 +16,11 @@ export default class WebRTC {
     const sanitizedId = this.replaceInvalidId(userId)
     this.myPeer = new Peer(sanitizedId)
     this.network = network
+    this.videoGrid = document.querySelector('.video-grid')
+    
     console.log('WebRTC initialized with userId:', userId)
     console.log('sanitizedId:', sanitizedId)
+    
     this.myPeer.on('error', (err) => {
       console.log('PeerJS error:', err.type)
       console.error('PeerJS error details:', err)
@@ -72,7 +74,6 @@ export default class WebRTC {
         console.log('User media obtained successfully')
         this.myStream = stream
         this.addVideoStream(this.myVideo, this.myStream)
-        this.setUpButtons()
         store.dispatch(setVideoConnected(true))
         this.network.videoConnected()
       })
@@ -109,10 +110,29 @@ export default class WebRTC {
   addVideoStream(video: HTMLVideoElement, stream: MediaStream) {
     video.srcObject = stream
     video.playsInline = true
+    video.className = 'video-element'
     video.addEventListener('loadedmetadata', () => {
       video.play()
     })
-    if (this.videoGrid) this.videoGrid.append(video)
+    
+    if (this.videoGrid) {
+      // Ensure the video grid is visible
+      (this.videoGrid as HTMLElement).style.display = 'flex'
+      this.videoGrid.append(video)
+      
+      console.log(`Video added to grid. Total videos: ${this.videoGrid.children.length}`)
+      
+      // Center the videos in the container
+      this.updateVideoGridLayout()
+    }
+  }
+
+  // New method to update video grid layout
+  private updateVideoGridLayout() {
+    if (!this.videoGrid) return
+    
+    const totalVideos = this.videoGrid.children.length
+    console.log(`Updating video grid layout. Total videos: ${totalVideos}`)
   }
 
   // method to remove video stream (when we are the host of the call)
@@ -137,37 +157,57 @@ export default class WebRTC {
     }
   }
 
-  // method to set up mute/unmute and video on/off buttons
+  // Stub method that does nothing, for backward compatibility
   setUpButtons() {
-    const audioButton = document.createElement('button')
-    audioButton.innerText = 'Mute'
-    audioButton.addEventListener('click', () => {
-      if (this.myStream) {
-        const audioTrack = this.myStream.getAudioTracks()[0]
-        if (audioTrack.enabled) {
-          audioTrack.enabled = false
-          audioButton.innerText = 'Unmute'
+    console.log('setUpButtons is deprecated - using VideoControls component instead')
+  }
+
+  // Method to toggle audio on/off
+  toggleAudio(enabled: boolean) {
+    if (this.myStream) {
+      const audioTrack = this.myStream.getAudioTracks()[0]
+      if (audioTrack) {
+        audioTrack.enabled = enabled
+        console.log(`Audio ${enabled ? 'enabled' : 'disabled'}`)
+      }
+    }
+  }
+
+  // Method to toggle video on/off
+  toggleVideo(enabled: boolean) {
+    if (this.myStream) {
+      const videoTrack = this.myStream.getVideoTracks()[0]
+      if (videoTrack) {
+        videoTrack.enabled = enabled
+        console.log(`Video ${enabled ? 'enabled' : 'disabled'}`)
+        
+        // If turning off video, only hide my own video
+        if (!enabled) {
+          // Hide my video
+          if (this.myVideo && this.myVideo.parentElement) {
+            (this.myVideo as HTMLElement).style.display = 'none';
+          }
         } else {
-          audioTrack.enabled = true
-          audioButton.innerText = 'Mute'
+          // Show my video again
+          if (this.myVideo && this.myVideo.parentElement) {
+            (this.myVideo as HTMLElement).style.display = 'block';
+          }
+        }
+        
+        // Make sure the video grid is still visible if there are other videos
+        if (this.videoGrid && this.videoGrid.children.length > 1) {
+          (this.videoGrid as HTMLElement).style.display = 'flex';
         }
       }
-    })
-    const videoButton = document.createElement('button')
-    videoButton.innerText = 'Video off'
-    videoButton.addEventListener('click', () => {
-      if (this.myStream) {
-        const audioTrack = this.myStream.getVideoTracks()[0]
-        if (audioTrack.enabled) {
-          audioTrack.enabled = false
-          videoButton.innerText = 'Video on'
-        } else {
-          audioTrack.enabled = true
-          videoButton.innerText = 'Video off'
-        }
-      }
-    })
-    this.buttonGrid?.append(audioButton)
-    this.buttonGrid?.append(videoButton)
+    }
+  }
+
+  // Method to check if video track is enabled
+  isVideoEnabled(): boolean {
+    return Boolean(
+      this.myStream && 
+      this.myStream.getVideoTracks().length > 0 && 
+      this.myStream.getVideoTracks()[0].enabled
+    )
   }
 }

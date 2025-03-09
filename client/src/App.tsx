@@ -7,6 +7,7 @@ import RoomSelectionDialog from './components/RoomSelectionDialog'
 import LoginDialog from './components/LoginDialog'
 import ComputerDialog from './components/ComputerDialog'
 import VideoConnectionDialog from './components/VideoConnectionDialog'
+import VideoControls from './components/VideoControls'
 import HelperButtonGroup from './components/HelperButtonGroup'
 import MobileVirtualJoystick from './components/MobileVirtualJoystick'
 
@@ -49,6 +50,8 @@ function App() {
       {ui}
       {/* Render HelperButtonGroup if no dialogs are opened. */}
       {!computerDialogOpen && <HelperButtonGroup />}
+      {/* Render VideoControls when logged in */}
+      {loggedIn && <VideoControls />}
     </Backdrop>
   )
 }
