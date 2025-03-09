@@ -3,7 +3,7 @@ services:
     name: pixxlverse
     env: node
     buildCommand: yarn && cd types && yarn && cd ../server && tsc --project tsconfig.server.json
-    startCommand: cd server/lib && node index.js
+    startCommand: node server/lib/server/index.js
     envVars:
       - key: PORT
         value: 10000
