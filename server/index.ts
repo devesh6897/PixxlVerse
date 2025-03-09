@@ -42,5 +42,11 @@ gameServer.define(RoomType.CUSTOM, SkyOffice).enableRealtimeListing()
 // register colyseus monitor AFTER registering your room handlers
 app.use('/colyseus', monitor())
 
+// Add a simple route to confirm the server is running
+app.get('/', (req, res) => {
+  res.send('PixxlVerse server is running!')
+})
+
 gameServer.listen(port)
-console.log(`Listening on ws://localhost:${port}`)
+console.log(`Listening on port ${port}`)
+console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)

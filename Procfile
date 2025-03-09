@@ -1,0 +1,1 @@
+web: cd server/lib && node index.js 
