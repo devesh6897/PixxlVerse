@@ -9,4 +9,4 @@
   status = 200
 
 [build.environment]
-  VITE_SERVER_URL = "https://pixxlverse-backend.onrender.com"
+  VITE_SERVER_URL = "wss://pixxlverse-backend.onrender.com"
