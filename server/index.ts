@@ -47,6 +47,7 @@ app.get('/', (req, res) => {
   res.send('PixxlVerse server is running!')
 })
 
-gameServer.listen(port)
+// Explicitly bind to all network interfaces (0.0.0.0)
+gameServer.listen(port, '0.0.0.0')
 console.log(`Listening on port ${port}`)
 console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
