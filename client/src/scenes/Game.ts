@@ -4,7 +4,6 @@ import Phaser from 'phaser'
 import { createCharacterAnims } from '../anims/CharacterAnims'
 
 import Item from '../items/Item'
-import Chair from '../items/Chair'
 import Computer from '../items/Computer'
 import VendingMachine from '../items/VendingMachine'
 import '../characters/MyPlayer'
@@ -76,15 +75,6 @@ export default class Game extends Phaser.Scene {
     this.myPlayer = this.add.myPlayer(705, 500, 'adam', this.network.mySessionId)
     this.playerSelector = new PlayerSelector(this, 0, 0, 16, 16)
 
-    // import chair objects from Tiled map to Phaser
-    const chairs = this.physics.add.staticGroup({ classType: Chair })
-    const chairLayer = this.map.getObjectLayer('Chair')
-    chairLayer.objects.forEach((chairObj) => {
-      const item = this.addObjectFromTiled(chairs, chairObj, 'chairs', 'chair') as Chair
-      // custom properties[0] is the object direction specified in Tiled
-      item.itemDirection = chairObj.properties[0].value
-    })
-
     // import computers objects from Tiled map to Phaser
     const computers = this.physics.add.staticGroup({ classType: Computer })
     const computerLayer = this.map.getObjectLayer('Computer')
@@ -121,7 +111,7 @@ export default class Game extends Phaser.Scene {
 
     this.physics.add.overlap(
       this.playerSelector,
-      [chairs, computers, vendingMachines],
+      [computers, vendingMachines],
       this.handleItemSelectorOverlap,
       undefined,
       this
