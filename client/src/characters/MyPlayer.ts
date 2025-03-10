@@ -4,7 +4,6 @@ import { PlayerBehavior } from '../../../types/PlayerBehavior'
 import { sittingShiftData } from './Player'
 import Player from './Player'
 import Network from '../services/Network'
-import Chair from '../items/Chair'
 import Computer from '../items/Computer'
 
 import { phaserEvents, Event } from '../events/EventCenter'
@@ -15,7 +14,6 @@ import { openURL } from '../utils/helpers'
 
 export default class MyPlayer extends Player {
   private playContainerBody: Phaser.Physics.Arcade.Body
-  private chairOnSit?: Chair
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -115,7 +113,6 @@ export default class MyPlayer extends Player {
           parts[1] = 'idle'
           this.play(parts.join('_'), true)
           this.playerBehavior = PlayerBehavior.IDLE
-          this.chairOnSit?.clearDialogBox()
           playerSelector.setPosition(this.x, this.y)
           playerSelector.update(this, cursors)
           network.updatePlayer(this.x, this.y, this.anims.currentAnim.key)
