@@ -7,7 +7,7 @@ import { RoomType } from '../types/Rooms'
 
 // import socialRoutes from "@colyseus/social/express"
 
-import { SkyOffice } from './rooms/entry'
+import { space } from './rooms/entry'
 
 const port = Number(process.env.PORT || 2567)
 const app = express()
@@ -23,21 +23,13 @@ const gameServer = new Server({
 
 // register room handlers
 gameServer.define(RoomType.LOBBY, LobbyRoom)
-gameServer.define(RoomType.PUBLIC, SkyOffice, {
+gameServer.define(RoomType.PUBLIC, space, {
   name: 'Public Lobby',
   description: 'For making friends and familiarizing yourself with the controls',
   password: null,
   autoDispose: false,
 })
-gameServer.define(RoomType.CUSTOM, SkyOffice).enableRealtimeListing()
-
-/**
- * Register @colyseus/social routes
- *
- * - uncomment if you want to use default authentication (https://docs.colyseus.io/server/authentication/)
- * - also uncomment the import statement
- */
-// app.use("/", socialRoutes);
+gameServer.define(RoomType.CUSTOM, space).enableRealtimeListing()
 
 // register colyseus monitor AFTER registering your room handlers
 app.use('/colyseus', monitor())

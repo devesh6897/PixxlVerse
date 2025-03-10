@@ -11,7 +11,7 @@ import {
   ComputerRemoveUserCommand,
 } from './commands/ComputerUpdateArrayCommand'
 
-export class SkyOffice extends Room<OfficeState> {
+export class space extends Room<OfficeState> {
   private dispatcher = new Dispatcher(this)
   private name: string
   private description: string
