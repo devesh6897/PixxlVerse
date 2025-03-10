@@ -9,6 +9,8 @@ import ShareIcon from '@mui/icons-material/Share'
 import CloseIcon from '@mui/icons-material/Close'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import ArrowRightIcon from '@mui/icons-material/ArrowRight'
+import VideogameAssetIcon from '@mui/icons-material/VideogameAsset'
+import VideogameAssetOffIcon from '@mui/icons-material/VideogameAssetOff'
 
 import { setShowJoystick } from '../stores/UserStore'
 import { useAppSelector, useAppDispatch } from '../hooks'
@@ -113,6 +115,13 @@ export default function HelperButtonGroup() {
   return (
     <Backdrop>
       <div className="wrapper-group">
+        {roomJoined && (
+          <Tooltip title={showJoystick ? 'Disable virtual joystick' : 'Enable virtual joystick'}>
+            <StyledFab size="small" onClick={() => dispatch(setShowJoystick(!showJoystick))}>
+              {showJoystick ? <VideogameAssetOffIcon /> : <VideogameAssetIcon />}
+            </StyledFab>
+          </Tooltip>
+        )}
         {showRoomInfo && (
           <Wrapper>
             <IconButton className="close" onClick={() => setShowRoomInfo(false)} size="small">
@@ -188,11 +197,6 @@ export default function HelperButtonGroup() {
           </>
         )}
       </ButtonGroup>
-      {showJoystick && (
-        <JoystickWrapper>
-          <JoystickItem onDirectionChange={handleMovement}></JoystickItem>
-        </JoystickWrapper>
-      )}
     </Backdrop>
   )
 }
