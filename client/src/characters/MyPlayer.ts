@@ -63,52 +63,6 @@ export default class MyPlayer extends Player {
 
     switch (this.playerBehavior) {
       case PlayerBehavior.IDLE:
-        // if press E in front of selected chair
-        if (Phaser.Input.Keyboard.JustDown(keyE) && item?.itemType === ItemType.CHAIR) {
-          const chairItem = item as Chair
-          /**
-           * move player to the chair and play sit animation
-           * a delay is called to wait for player movement (from previous velocity) to end
-           * as the player tends to move one more frame before sitting down causing player
-           * not sitting at the center of the chair
-           */
-          this.scene.time.addEvent({
-            delay: 10,
-            callback: () => {
-              // update character velocity and position
-              this.setVelocity(0, 0)
-              if (chairItem.itemDirection) {
-                this.setPosition(
-                  chairItem.x + sittingShiftData[chairItem.itemDirection][0],
-                  chairItem.y + sittingShiftData[chairItem.itemDirection][1]
-                ).setDepth(chairItem.depth + sittingShiftData[chairItem.itemDirection][2])
-                // also update playerNameContainer velocity and position
-                this.playContainerBody.setVelocity(0, 0)
-                this.playerContainer.setPosition(
-                  chairItem.x + sittingShiftData[chairItem.itemDirection][0],
-                  chairItem.y + sittingShiftData[chairItem.itemDirection][1] - 30
-                )
-              }
-
-              this.play(`${this.playerTexture}_sit_${chairItem.itemDirection}`, true)
-              playerSelector.selectedItem = undefined
-              if (chairItem.itemDirection === 'up') {
-                playerSelector.setPosition(this.x, this.y - this.height)
-              } else {
-                playerSelector.setPosition(0, 0)
-              }
-              // send new location and anim to server
-              network.updatePlayer(this.x, this.y, this.anims.currentAnim.key)
-            },
-            loop: false,
-          })
-          // set up new dialog as player sits down
-          chairItem.clearDialogBox()
-          chairItem.setDialogBox('Press E to leave')
-          this.chairOnSit = chairItem
-          this.playerBehavior = PlayerBehavior.SITTING
-          return
-        }
 
         let vx = 0
         let vy = 0
