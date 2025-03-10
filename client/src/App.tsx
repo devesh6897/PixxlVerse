@@ -9,7 +9,6 @@ import ComputerDialog from './components/ComputerDialog'
 import VideoConnectionDialog from './components/VideoConnectionDialog'
 import VideoControls from './components/VideoControls'
 import HelperButtonGroup from './components/HelperButtonGroup'
-import MobileVirtualJoystick from './components/MobileVirtualJoystick'
 
 const Backdrop = styled.div`
   position: absolute;
@@ -33,7 +32,6 @@ function App() {
         <>
           {/* Render VideoConnectionDialog if user is not connected to a webcam. */}
           {!videoConnected && <VideoConnectionDialog />}
-          <MobileVirtualJoystick />
         </>
       )
     }

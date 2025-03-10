@@ -11,13 +11,11 @@ import { phaserEvents, Event } from '../events/EventCenter'
 import store from '../stores'
 import { ItemType } from '../../../types/Items'
 import { NavKeys } from '../../../types/KeyboardState'
-import { JoystickMovement } from '../components/Joystick'
 import { openURL } from '../utils/helpers'
 
 export default class MyPlayer extends Player {
   private playContainerBody: Phaser.Physics.Arcade.Body
   private chairOnSit?: Chair
-  public joystickMovement?: JoystickMovement
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -39,10 +37,6 @@ export default class MyPlayer extends Player {
     this.playerTexture = texture
     this.anims.play(`${this.playerTexture}_idle_down`, true)
     phaserEvents.emit(Event.MY_PLAYER_TEXTURE_CHANGE, this.x, this.y, this.anims.currentAnim.key)
-  }
-
-  handleJoystickMovement(movement: JoystickMovement) {
-    this.joystickMovement = movement
   }
 
   update(
@@ -116,29 +110,17 @@ export default class MyPlayer extends Player {
           return
         }
 
-        const speed = 200
         let vx = 0
         let vy = 0
+        const speed = 200
 
-        let joystickLeft = false
-        let joystickRight = false
-        let joystickUp = false
-        let joystickDown = false
-
-        if (this.joystickMovement?.isMoving) {
-          joystickLeft = this.joystickMovement.direction.left
-          joystickRight = this.joystickMovement.direction.right
-          joystickUp = this.joystickMovement.direction.up
-          joystickDown = this.joystickMovement.direction.down
-        }
-
-        if (cursors.left?.isDown || cursors.A?.isDown || joystickLeft) vx -= speed
-        if (cursors.right?.isDown || cursors.D?.isDown || joystickRight) vx += speed
-        if (cursors.up?.isDown || cursors.W?.isDown || joystickUp) {
+        if (cursors.left?.isDown || cursors.A?.isDown) vx -= speed
+        if (cursors.right?.isDown || cursors.D?.isDown) vx += speed
+        if (cursors.up?.isDown || cursors.W?.isDown) {
           vy -= speed
           this.setDepth(this.y) //change player.depth if player.y changes
         }
-        if (cursors.down?.isDown || cursors.S?.isDown || joystickDown) {
+        if (cursors.down?.isDown || cursors.S?.isDown) {
           vy += speed
           this.setDepth(this.y) //change player.depth if player.y changes
         }

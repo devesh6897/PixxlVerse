@@ -1,19 +1,11 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
-import Fab from '@mui/material/Fab'
 import IconButton from '@mui/material/IconButton'
 import Avatar from '@mui/material/Avatar'
-import Tooltip from '@mui/material/Tooltip'
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
-import ShareIcon from '@mui/icons-material/Share'
 import CloseIcon from '@mui/icons-material/Close'
-import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import ArrowRightIcon from '@mui/icons-material/ArrowRight'
-import VideogameAssetIcon from '@mui/icons-material/VideogameAsset'
-import VideogameAssetOffIcon from '@mui/icons-material/VideogameAssetOff'
 
-import { setShowJoystick } from '../stores/UserStore'
-import { useAppSelector, useAppDispatch } from '../hooks'
+import { useAppSelector } from '../hooks'
 import { getAvatarString, getColorByString } from '../util'
 
 const Backdrop = styled.div`
@@ -48,21 +40,6 @@ const Wrapper = styled.div`
     top: 15px;
     right: 15px;
   }
-
-  .tip {
-    margin-left: 12px;
-  }
-`
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 10px;
-`
-
-const Title = styled.h3`
-  font-size: 24px;
-  color: #eee;
-  text-align: center;
 `
 
 const RoomName = styled.div`
@@ -94,34 +71,15 @@ const RoomDescription = styled.div`
   justify-content: center;
 `
 
-const StyledFab = styled(Fab)<{ target?: string }>`
-  &:hover {
-    color: #1ea2df;
-  }
-`
-
 export default function HelperButtonGroup() {
-  const [showControlGuide, setShowControlGuide] = useState(false)
   const [showRoomInfo, setShowRoomInfo] = useState(false)
-  const showJoystick = useAppSelector((state) => state.user.showJoystick)
-  const roomJoined = useAppSelector((state) => state.room.roomJoined)
   const roomId = useAppSelector((state) => state.room.roomId)
   const roomName = useAppSelector((state) => state.room.roomName)
   const roomDescription = useAppSelector((state) => state.room.roomDescription)
-  const dispatch = useAppDispatch()
-  const playerNameMap = useAppSelector((state) => state.user.playerNameMap)
-  const sessionId = useAppSelector((state) => state.user.sessionId)
 
   return (
     <Backdrop>
       <div className="wrapper-group">
-        {roomJoined && (
-          <Tooltip title={showJoystick ? 'Disable virtual joystick' : 'Enable virtual joystick'}>
-            <StyledFab size="small" onClick={() => dispatch(setShowJoystick(!showJoystick))}>
-              {showJoystick ? <VideogameAssetOffIcon /> : <VideogameAssetIcon />}
-            </StyledFab>
-          </Tooltip>
-        )}
         {showRoomInfo && (
           <Wrapper>
             <IconButton className="close" onClick={() => setShowRoomInfo(false)} size="small">
@@ -139,64 +97,9 @@ export default function HelperButtonGroup() {
             <RoomDescription>
               <ArrowRightIcon /> Description: {roomDescription}
             </RoomDescription>
-            <p className="tip">
-              <LightbulbIcon />
-              Shareable link coming up 😄
-            </p>
-          </Wrapper>
-        )}
-        {showControlGuide && (
-          <Wrapper>
-            <Title>Controls</Title>
-            <IconButton className="close" onClick={() => setShowControlGuide(false)} size="small">
-              <CloseIcon />
-            </IconButton>
-            <ul>
-              <li>
-                <strong>W, A, S, D or arrow keys</strong> to move
-              </li>
-              <li>
-                <strong>E</strong> to sit down (when facing a chair)
-              </li>
-              <li>
-                <strong>R</strong> to use computer to screen share (when facing a computer)
-              </li>
-            </ul>
-            <p className="tip">
-              <LightbulbIcon />
-              Video connection will start if you are close to someone else
-            </p>
           </Wrapper>
         )}
       </div>
-      <ButtonGroup>
-        {roomJoined && (
-          <>
-            <Tooltip title="Room Info">
-              <StyledFab
-                size="small"
-                onClick={() => {
-                  setShowRoomInfo(!showRoomInfo)
-                  setShowControlGuide(false)
-                }}
-              >
-                <ShareIcon />
-              </StyledFab>
-            </Tooltip>
-            <Tooltip title="Control Guide">
-              <StyledFab
-                size="small"
-                onClick={() => {
-                  setShowControlGuide(!showControlGuide)
-                  setShowRoomInfo(false)
-                }}
-              >
-                <HelpOutlineIcon />
-              </StyledFab>
-            </Tooltip>
-          </>
-        )}
-      </ButtonGroup>
     </Backdrop>
   )
 }
