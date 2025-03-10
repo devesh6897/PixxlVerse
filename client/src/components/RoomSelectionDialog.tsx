@@ -93,7 +93,7 @@ const ProgressBarWrapper = styled.div`
   align-items: center;
 
   h3 {
-    color: #33ac96;
+    color: #b87efa;
   }
 `
 
