@@ -6,16 +6,13 @@ import Avatar from '@mui/material/Avatar'
 import Tooltip from '@mui/material/Tooltip'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import ShareIcon from '@mui/icons-material/Share'
-import LightModeIcon from '@mui/icons-material/LightMode'
-import DarkModeIcon from '@mui/icons-material/DarkMode'
 import CloseIcon from '@mui/icons-material/Close'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import ArrowRightIcon from '@mui/icons-material/ArrowRight'
 import VideogameAssetIcon from '@mui/icons-material/VideogameAsset'
 import VideogameAssetOffIcon from '@mui/icons-material/VideogameAssetOff'
 
-import { BackgroundMode } from '../../../types/BackgroundMode'
-import { setShowJoystick, toggleBackgroundMode } from '../stores/UserStore'
+import { setShowJoystick } from '../stores/UserStore'
 import { useAppSelector, useAppDispatch } from '../hooks'
 import { getAvatarString, getColorByString } from '../util'
 
@@ -107,12 +104,13 @@ export default function HelperButtonGroup() {
   const [showControlGuide, setShowControlGuide] = useState(false)
   const [showRoomInfo, setShowRoomInfo] = useState(false)
   const showJoystick = useAppSelector((state) => state.user.showJoystick)
-  const backgroundMode = useAppSelector((state) => state.user.backgroundMode)
   const roomJoined = useAppSelector((state) => state.room.roomJoined)
   const roomId = useAppSelector((state) => state.room.roomId)
   const roomName = useAppSelector((state) => state.room.roomName)
   const roomDescription = useAppSelector((state) => state.room.roomDescription)
   const dispatch = useAppDispatch()
+  const playerNameMap = useAppSelector((state) => state.user.playerNameMap)
+  const sessionId = useAppSelector((state) => state.user.sessionId)
 
   return (
     <Backdrop>
@@ -198,11 +196,6 @@ export default function HelperButtonGroup() {
             </Tooltip>
           </>
         )}
-        <Tooltip title="Switch Background Theme">
-          <StyledFab size="small" onClick={() => dispatch(toggleBackgroundMode())}>
-            {backgroundMode === BackgroundMode.DAY ? <DarkModeIcon /> : <LightModeIcon />}
-          </StyledFab>
-        </Tooltip>
       </ButtonGroup>
     </Backdrop>
   )
