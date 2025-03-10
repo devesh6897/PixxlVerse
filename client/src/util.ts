@@ -9,7 +9,7 @@ export function sanitizeId(id: string) {
 }
 
 const colorArr = [
-  '#b87efa',
+  '#7bf1a8',
   '#ff7e50',
   '#9acd32',
   '#daa520',
