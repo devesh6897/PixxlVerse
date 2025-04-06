@@ -1,18 +1,24 @@
 {
-  "name": "PixelVerse",
+  "name": "skyoffice",
   "version": "1.0.0",
-  "description": "Server for PixelVerse",
+  "description": "Server for SkyOffice",
   "main": ".eslintrc.js",
   "scripts": {
     "start": "cd server && ts-node-dev --project tsconfig.server.json --respawn --transpile-only index.ts",
     "heroku-postbuild": "yarn && cd types && yarn && cd ../server && tsc --project tsconfig.server.json",
-    "build": "cd types && yarn && cd ../server && tsc --project tsconfig.server.json",
     "test": "echo \"Error: no test specified\" && exit 1"
-    
-
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kevinshen56714/SkyOffice.git"
   },
   "keywords": [],
-  "author": "devesh6897",
+  "author": "kevinshen56714",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kevinshen56714/SkyOffice/issues"
+  },
+  "homepage": "https://github.com/kevinshen56714/SkyOffice#readme",
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",

@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import Network from '../services/Network'
+import { BackgroundMode } from '../../../types/BackgroundMode'
 import store from '../stores'
 import { setRoomJoined } from '../stores/RoomStore'
 
@@ -78,7 +79,7 @@ export default class Bootstrap extends Phaser.Scene {
 
     this.load.on('complete', () => {
       this.preloadComplete = true
-      this.launchBackground()
+      this.launchBackground(store.getState().user.backgroundMode)
     })
   }
 
@@ -86,8 +87,8 @@ export default class Bootstrap extends Phaser.Scene {
     this.network = new Network()
   }
 
-  private launchBackground() {
-    this.scene.launch('background')
+  private launchBackground(backgroundMode: BackgroundMode) {
+    this.scene.launch('background', { backgroundMode })
   }
 
   launchGame() {
@@ -99,5 +100,10 @@ export default class Bootstrap extends Phaser.Scene {
 
     // update Redux state
     store.dispatch(setRoomJoined(true))
+  }
+
+  changeBackgroundMode(backgroundMode: BackgroundMode) {
+    this.scene.stop('background')
+    this.launchBackground(backgroundMode)
   }
 }

@@ -93,7 +93,7 @@ const ProgressBarWrapper = styled.div`
   align-items: center;
 
   h3 {
-    color: #b87efa;
+    color: #33ac96;
   }
 `
 
@@ -179,7 +179,7 @@ export default function RoomSelectionDialog() {
             </CustomRoomWrapper>
           ) : (
             <>
-              <Title>Welcome to a 2D MetaVerse</Title>
+              <Title>Welcome to SkyOffice</Title>
               <Content>
                 <img src={logo} alt="logo" />
                 <Button variant="contained" color="secondary" onClick={handleConnect}>

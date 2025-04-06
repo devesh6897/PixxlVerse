@@ -1,5 +1,5 @@
 import { Client, Room } from 'colyseus.js'
-import { IComputer, IOfficeState, IPlayer } from '../../../types/IOfficeState'
+import { IComputer, IOfficeState, IPlayer, IWhiteboard } from '../../../types/IOfficeState'
 import { Message } from '../../../types/Messages'
 import { IRoomData, RoomType } from '../../../types/Rooms'
 import { ItemType } from '../../../types/Items'
@@ -14,6 +14,12 @@ import {
   addAvailableRooms,
   removeAvailableRooms,
 } from '../stores/RoomStore'
+import {
+  pushChatMessage,
+  pushPlayerJoinedMessage,
+  pushPlayerLeftMessage,
+} from '../stores/ChatStore'
+import { setWhiteboardUrls } from '../stores/WhiteboardStore'
 
 export default class Network {
   private client: Client
@@ -90,8 +96,6 @@ export default class Network {
     this.lobby.leave()
     this.mySessionId = this.room.sessionId
     store.dispatch(setSessionId(this.room.sessionId))
-    
-    console.log("Initializing WebRTC with sessionId:", this.mySessionId)
     this.webRTC = new WebRTC(this.mySessionId, this)
 
     // new instance added to the players MapSchema
@@ -108,6 +112,7 @@ export default class Network {
           if (field === 'name' && value !== '') {
             phaserEvents.emit(Event.PLAYER_JOINED, player, key)
             store.dispatch(setPlayerNameMap({ id: key, name: value }))
+            store.dispatch(pushPlayerJoinedMessage(value))
           }
         })
       }
@@ -118,6 +123,7 @@ export default class Network {
       phaserEvents.emit(Event.PLAYER_LEFT, key)
       this.webRTC?.deleteVideoStream(key)
       this.webRTC?.deleteOnCalledVideoStream(key)
+      store.dispatch(pushPlayerLeftMessage(player.name))
       store.dispatch(removePlayerNameMap(key))
     }
 
@@ -132,9 +138,36 @@ export default class Network {
       }
     }
 
+    // new instance added to the whiteboards MapSchema
+    this.room.state.whiteboards.onAdd = (whiteboard: IWhiteboard, key: string) => {
+      store.dispatch(
+        setWhiteboardUrls({
+          whiteboardId: key,
+          roomId: whiteboard.roomId,
+        })
+      )
+      // track changes on every child object's connectedUser
+      whiteboard.connectedUser.onAdd = (item, index) => {
+        phaserEvents.emit(Event.ITEM_USER_ADDED, item, key, ItemType.WHITEBOARD)
+      }
+      whiteboard.connectedUser.onRemove = (item, index) => {
+        phaserEvents.emit(Event.ITEM_USER_REMOVED, item, key, ItemType.WHITEBOARD)
+      }
+    }
+
+    // new instance added to the chatMessages ArraySchema
+    this.room.state.chatMessages.onAdd = (item, index) => {
+      store.dispatch(pushChatMessage(item))
+    }
+
     // when the server sends room data
     this.room.onMessage(Message.SEND_ROOM_DATA, (content) => {
       store.dispatch(setJoinedRoomData(content))
+    })
+
+    // when a user sends a message
+    this.room.onMessage(Message.ADD_CHAT_MESSAGE, ({ clientId, content }) => {
+      phaserEvents.emit(Event.UPDATE_DIALOG_BUBBLE, clientId, content)
     })
 
     // when a peer disconnects with myPeer
@@ -147,6 +180,11 @@ export default class Network {
       const computerState = store.getState().computer
       computerState.shareScreenManager?.onUserLeft(clientId)
     })
+  }
+
+  // method to register event listener and call back function when a item user added
+  onChatMessageAdded(callback: (playerId: string, content: string) => void, context?: any) {
+    phaserEvents.on(Event.UPDATE_DIALOG_BUBBLE, callback, context)
   }
 
   // method to register event listener and call back function when a item user added
@@ -229,7 +267,19 @@ export default class Network {
     this.room?.send(Message.DISCONNECT_FROM_COMPUTER, { computerId: id })
   }
 
+  connectToWhiteboard(id: string) {
+    this.room?.send(Message.CONNECT_TO_WHITEBOARD, { whiteboardId: id })
+  }
+
+  disconnectFromWhiteboard(id: string) {
+    this.room?.send(Message.DISCONNECT_FROM_WHITEBOARD, { whiteboardId: id })
+  }
+
   onStopScreenShare(id: string) {
     this.room?.send(Message.STOP_SCREEN_SHARE, { computerId: id })
+  }
+
+  addChatMessage(content: string) {
+    this.room?.send(Message.ADD_CHAT_MESSAGE, { content: content })
   }
 }

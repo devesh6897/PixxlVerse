@@ -13,7 +13,20 @@ export interface IComputer extends Schema {
   connectedUser: SetSchema<string>
 }
 
+export interface IWhiteboard extends Schema {
+  roomId: string
+  connectedUser: SetSchema<string>
+}
+
+export interface IChatMessage extends Schema {
+  author: string
+  createdAt: number
+  content: string
+}
+
 export interface IOfficeState extends Schema {
   players: MapSchema<IPlayer>
   computers: MapSchema<IComputer>
+  whiteboards: MapSchema<IWhiteboard>
+  chatMessages: ArraySchema<IChatMessage>
 }
