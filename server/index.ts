@@ -16,6 +16,11 @@ app.use(cors())
 app.use(express.json())
 // app.use(express.static('dist'))
 
+// Add a basic root route handler
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running' })
+})
+
 const server = http.createServer(app)
 const gameServer = new Server({
   server,
