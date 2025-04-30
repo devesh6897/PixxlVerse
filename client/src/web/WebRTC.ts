@@ -227,6 +227,13 @@ export default class WebRTC {
     const overlay = document.querySelector(`.video-status-overlay-${videoId}`) as HTMLElement;
     if (overlay) {
       overlay.style.display = isOff ? 'block' : 'none';
+      
+      // Make sure it's correctly positioned in the center of the video
+      if (isOff) {
+        const videoRect = video.getBoundingClientRect();
+        overlay.style.top = `${videoRect.top + (videoRect.height / 2) - 15}px`;
+        overlay.style.left = `${videoRect.left + (videoRect.width / 2) - 15}px`;
+      }
     }
   }
   
@@ -238,6 +245,13 @@ export default class WebRTC {
     const overlay = document.querySelector(`.mic-status-overlay-${videoId}`) as HTMLElement;
     if (overlay) {
       overlay.style.display = isMuted ? 'block' : 'none';
+      
+      // Make sure it's correctly positioned in the bottom right of the video
+      if (isMuted) {
+        const videoRect = video.getBoundingClientRect();
+        overlay.style.top = `${videoRect.bottom - 25}px`;
+        overlay.style.left = `${videoRect.right - 25}px`;
+      }
     }
   }
 
@@ -252,15 +266,97 @@ export default class WebRTC {
       if (!this.onCalledPeers.has(call.peer)) {
         call.answer(this.myStream)
         const video = document.createElement('video')
-        const peerName = `Player ${this.onCalledPeers.size + 1}`;
-        this.onCalledPeers.set(call.peer, { call, video, name: peerName })
+        
+        // Get the player name from the playerNameMap in the store
+        const playerName = this.getRealPlayerName(call.peer);
+        this.onCalledPeers.set(call.peer, { call, video, name: playerName })
 
         call.on('stream', (userVideoStream) => {
-          this.addVideoStream(video, userVideoStream, false, peerName)
+          // Check for updated name when stream starts
+          const updatedName = this.getRealPlayerName(call.peer);
+          this.addVideoStream(video, userVideoStream, false, updatedName)
+          
+          // Monitor tracks for mute/disable events
+          this.monitorRemoteStreamTracks(video, userVideoStream);
         })
       }
       // on close is triggered manually with deleteOnCalledVideoStream()
     })
+  }
+  
+  // Get the real player name from the store's playerNameMap
+  private getRealPlayerName(peerId: string): string {
+    try {
+      const state = store.getState();
+      if (state && state.user && state.user.playerNameMap) {
+        // playerNameMap is a Map, so we need to use the Map.get method
+        const nameFromMap = state.user.playerNameMap.get(peerId);
+        if (nameFromMap) {
+          return nameFromMap;
+        }
+        
+        // Try with original ID if the sanitation affected it
+        const sanitizedId = this.replaceInvalidId(peerId);
+        // For Maps, we need to use keys() iterator
+        for (const key of state.user.playerNameMap.keys()) {
+          if (this.replaceInvalidId(key) === sanitizedId) {
+            return state.user.playerNameMap.get(key) || `Player ${peerId.substring(0, 4)}`;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error getting player name from store:', e);
+    }
+    
+    // Fall back to default name if we can't find the real one
+    return `Player ${peerId.substring(0, 4)}`;
+  }
+
+  // Monitor remote stream tracks for mute/disable events
+  private monitorRemoteStreamTracks(video: HTMLVideoElement, stream: MediaStream) {
+    // For audio tracks
+    stream.getAudioTracks().forEach(track => {
+      // Set initial state
+      this.updateMicStatus(video, !track.enabled);
+      
+      // Create a periodic check for track state
+      setInterval(() => {
+        this.updateMicStatus(video, !track.enabled);
+      }, 1000);
+      
+      // Standard events
+      track.addEventListener('mute', () => {
+        this.updateMicStatus(video, true);
+      });
+      track.addEventListener('unmute', () => {
+        this.updateMicStatus(video, false);
+      });
+      track.addEventListener('ended', () => {
+        this.updateMicStatus(video, true);
+      });
+    });
+    
+    // For video tracks
+    stream.getVideoTracks().forEach(track => {
+      // Set initial state
+      this.updateVideoStatus(video, !track.enabled);
+      
+      // Create a periodic check for track state
+      setInterval(() => {
+        this.updateVideoStatus(video, !track.enabled);
+      }, 1000);
+      
+      // Standard events
+      track.addEventListener('mute', () => {
+        this.updateVideoStatus(video, true);
+      });
+      track.addEventListener('unmute', () => {
+        this.updateVideoStatus(video, false);
+      });
+      track.addEventListener('ended', () => {
+        this.updateVideoStatus(video, true);
+      });
+    });
   }
 
   // check if permission has been granted before
@@ -300,6 +396,18 @@ export default class WebRTC {
           console.log("Could not log video track info", e);
         }
         
+        // Try to get my name from the store
+        try {
+          const state = store.getState();
+          // Get my own ID from session
+          const myId = state?.user?.sessionId || '';
+          // Try to find my name in the playerNameMap using my ID
+          const myName = myId ? (state?.user?.playerNameMap.get(myId) || this.myName) : this.myName;
+          this.myName = myName;
+        } catch (e) {
+          console.error('Could not get my name from store:', e);
+        }
+        
         this.addVideoStream(this.myVideo, this.myStream, true, this.myName)
         this.setUpControls()
         store.dispatch(setVideoConnected(true))
@@ -319,11 +427,18 @@ export default class WebRTC {
         console.log('calling', sanitizedId)
         const call = this.myPeer.call(sanitizedId, this.myStream)
         const video = document.createElement('video')
-        const peerName = `Player ${this.peers.size + 1}`;
-        this.peers.set(sanitizedId, { call, video, name: peerName })
+        
+        // Get the player name from the playerNameMap in the store
+        const playerName = this.getRealPlayerName(sanitizedId);
+        this.peers.set(sanitizedId, { call, video, name: playerName })
 
         call.on('stream', (userVideoStream) => {
-          this.addVideoStream(video, userVideoStream, false, peerName)
+          // Check for updated name when stream starts
+          const updatedName = this.getRealPlayerName(sanitizedId);
+          this.addVideoStream(video, userVideoStream, false, updatedName)
+          
+          // Monitor tracks for mute/disable events
+          this.monitorRemoteStreamTracks(video, userVideoStream);
         })
 
         // Add error handling and retry logic
@@ -377,32 +492,44 @@ export default class WebRTC {
     // Add overlays
     const overlays = this.addOverlaysToVideo(video, peerName);
     
-    // Set up track mute/unmute event listeners to update indicators
-    stream.getAudioTracks().forEach(track => {
-      // Set initial state
-      this.updateMicStatus(video, !track.enabled);
+    // Set up track mute/unmute event listeners to update indicators (for your own video)
+    if (isMyVideo) {
+      stream.getAudioTracks().forEach(track => {
+        // Set initial state
+        this.updateMicStatus(video, !track.enabled);
+        
+        // Monitor for changes
+        track.addEventListener('mute', () => {
+          this.updateMicStatus(video, true);
+        });
+        track.addEventListener('unmute', () => {
+          this.updateMicStatus(video, false);
+        });
+        
+        // Initial display
+        if (!track.enabled) {
+          this.updateMicStatus(video, true);
+        }
+      });
       
-      // Monitor for changes
-      track.addEventListener('mute', () => {
-        this.updateMicStatus(video, true);
+      stream.getVideoTracks().forEach(track => {
+        // Set initial state
+        this.updateVideoStatus(video, !track.enabled);
+        
+        // Monitor for changes
+        track.addEventListener('mute', () => {
+          this.updateVideoStatus(video, true);
+        });
+        track.addEventListener('unmute', () => {
+          this.updateVideoStatus(video, false);
+        });
+        
+        // Initial display
+        if (!track.enabled) {
+          this.updateVideoStatus(video, true);
+        }
       });
-      track.addEventListener('unmute', () => {
-        this.updateMicStatus(video, false);
-      });
-    });
-    
-    stream.getVideoTracks().forEach(track => {
-      // Set initial state
-      this.updateVideoStatus(video, !track.enabled);
-      
-      // Monitor for changes
-      track.addEventListener('mute', () => {
-        this.updateVideoStatus(video, true);
-      });
-      track.addEventListener('unmute', () => {
-        this.updateVideoStatus(video, false);
-      });
-    });
+    }
     
     // Reposition all videos
     if (!isMyVideo) {
