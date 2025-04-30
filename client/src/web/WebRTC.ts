@@ -417,53 +417,9 @@ export default class WebRTC {
         return false;
       };
       
-      // Try to get the player state from the store
-      try {
-        // Check peers maps to find which player this belongs to
-        let playerId = '';
-        
-        // Loop through peers to find the matching stream
-        for (const [id, peer] of this.peers.entries()) {
-          const peerStream = peer.video.srcObject as MediaStream;
-          if (peerStream && peerStream.id === stream.id) {
-            playerId = id;
-            break;
-          }
-        }
-        
-        // If we still don't have it, check onCalledPeers
-        if (!playerId) {
-          for (const [id, peer] of this.onCalledPeers.entries()) {
-            const peerStream = peer.video.srcObject as MediaStream;
-            if (peerStream && peerStream.id === stream.id) {
-              playerId = id;
-              break;
-            }
-          }
-        }
-        
-        // If we found the player, get their audio state from the users list
-        if (playerId) {
-          const state = store.getState();
-          // Access the player data directly using the playerNameMap from user store
-          // as we don't have direct access to player states from the store
-          const players = state.user.playerNameMap;
-          if (players && players.has(playerId)) {
-            // For now, we can use the default state since we can't reliably get the stored state
-            console.log(`Found player ${playerId} in store, using default initial audio state`);
-            // Use track's enabled property to determine initial state
-            const initialAudioState = !track.enabled;
-            this.updateMicStatus(video, initialAudioState);
-          }
-        }
-      } catch (e) {
-        console.error('Error getting initial audio state from store:', e);
-      }
-      
-      // Set initial state based on the track state
-      const isAudioMuted = !track.enabled;
-      console.log('Initial audio track state set to:', isAudioMuted ? 'muted' : 'unmuted');
-      this.updateMicStatus(video, isAudioMuted);
+      // Set initial state - initially don't show muted
+      this.updateMicStatus(video, false);
+      console.log('Initial audio track state set to unmuted for new connection');
       
       // Create a periodic check for track state
       const audioInterval = setInterval(() => {
@@ -540,53 +496,9 @@ export default class WebRTC {
         }
       };
       
-      // Try to get the player state from the store
-      try {
-        // Check peers maps to find which player this belongs to
-        let playerId = '';
-        
-        // Loop through peers to find the matching stream
-        for (const [id, peer] of this.peers.entries()) {
-          const peerStream = peer.video.srcObject as MediaStream;
-          if (peerStream && peerStream.id === stream.id) {
-            playerId = id;
-            break;
-          }
-        }
-        
-        // If we still don't have it, check onCalledPeers
-        if (!playerId) {
-          for (const [id, peer] of this.onCalledPeers.entries()) {
-            const peerStream = peer.video.srcObject as MediaStream;
-            if (peerStream && peerStream.id === stream.id) {
-              playerId = id;
-              break;
-            }
-          }
-        }
-        
-        // If we found the player, get their video state from the users list
-        if (playerId) {
-          const state = store.getState();
-          // Access the player data directly using the playerNameMap from user store
-          // as we don't have direct access to player states from the store
-          const players = state.user.playerNameMap;
-          if (players && players.has(playerId)) {
-            // For now, we can use the default state since we can't reliably get the stored state
-            console.log(`Found player ${playerId} in store, using default initial video state`);
-            // Use track's enabled property to determine initial state
-            const initialVideoState = !track.enabled;
-            this.updateVideoStatus(video, initialVideoState);
-          }
-        }
-      } catch (e) {
-        console.error('Error getting initial video state from store:', e);
-      }
-      
-      // Set initial state based on the track state
-      const isVideoOff = !track.enabled;
-      console.log('Initial video track state set to:', isVideoOff ? 'off' : 'on');
-      this.updateVideoStatus(video, isVideoOff);
+      // Set initial state - initially don't show video off
+      this.updateVideoStatus(video, false);
+      console.log('Initial video track state set to enabled for new connection');
       
       // Create a periodic check for track state
       const videoInterval = setInterval(() => {
