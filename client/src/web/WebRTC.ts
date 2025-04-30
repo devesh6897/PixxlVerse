@@ -124,6 +124,9 @@ export default class WebRTC {
     // Setup event listeners for player video and audio state changes
     this.setupStateChangeListeners();
 
+    // Setup layout change listeners
+    this.setupLayoutChangeListeners();
+
     // config peerJS
     this.initialize()
   }
@@ -177,6 +180,50 @@ export default class WebRTC {
         this.updateOverlayPositions(peerVideo);
       }
     });
+  }
+
+  // Setup listeners for layout changes
+  private setupLayoutChangeListeners() {
+    // Listen for screen sharing
+    phaserEvents.on(Event.SCREEN_SHARING_STARTED, () => {
+      this.repositionPeerVideos('column');
+    });
+    
+    phaserEvents.on(Event.SCREEN_SHARING_STOPPED, () => {
+      this.repositionPeerVideos('row');
+    });
+    
+    // Listen for whiteboard activation
+    phaserEvents.on(Event.WHITEBOARD_ACTIVATED, () => {
+      this.repositionPeerVideos('column');
+    });
+    
+    phaserEvents.on(Event.WHITEBOARD_DEACTIVATED, () => {
+      this.repositionPeerVideos('row');
+    });
+    
+    // Listen for game activation
+    phaserEvents.on(Event.GAME_STARTED, () => {
+      this.repositionPeerVideos('column');
+    });
+    
+    phaserEvents.on(Event.GAME_STOPPED, () => {
+      this.repositionPeerVideos('row');
+    });
+    
+    // Add a window resize listener to ensure the layout adapts to window size changes
+    window.addEventListener('resize', () => {
+      // Get the current container
+      const videoContainer = document.querySelector('.video-row-container') as HTMLElement;
+      if (videoContainer) {
+        // Check if we're in column mode by testing the flexDirection property
+        const isColumnMode = videoContainer.style.flexDirection === 'column';
+        this.repositionPeerVideos(isColumnMode ? 'column' : 'row');
+      }
+    });
+    
+    // We're now adding the layout toggle button directly in setUpControls
+    // so we don't need to create it here anymore
   }
 
   // Add overlays to a video without changing its structure
@@ -750,8 +797,68 @@ export default class WebRTC {
     }
   }
 
+  // Method to switch layout between row (default) and column (when screen sharing/games/whiteboard is active)
+  public switchVideoLayout(mode: 'row' | 'column') {
+    console.log(`Switching video layout to ${mode} mode`);
+    
+    const videoRowContainer = document.querySelector('.video-row-container') as HTMLElement;
+    if (!videoRowContainer) {
+      console.error('Video container not found');
+      return;
+    }
+    
+    if (mode === 'column') {
+      // Adjust the container to be a column on the right side
+      videoRowContainer.style.flexDirection = 'column';
+      videoRowContainer.style.left = 'auto';
+      videoRowContainer.style.right = '10px';
+      videoRowContainer.style.top = '10px';
+      videoRowContainer.style.bottom = '10px';
+      videoRowContainer.style.width = '230px'; // Just enough for one video
+      videoRowContainer.style.height = 'auto';
+      videoRowContainer.style.maxHeight = '100vh';
+      videoRowContainer.style.overflowY = 'auto';
+      videoRowContainer.style.justifyContent = 'flex-start';
+      
+      // Adjust each video to be smaller in column mode
+      const allVideos = videoRowContainer.querySelectorAll('video');
+      allVideos.forEach(video => {
+        (video as HTMLElement).style.width = '220px';
+        (video as HTMLElement).style.height = '140px';
+        (video as HTMLElement).style.marginBottom = '10px';
+      });
+    } else {
+      // Reset to horizontal row at the top
+      videoRowContainer.style.flexDirection = 'row';
+      videoRowContainer.style.left = '0';
+      videoRowContainer.style.right = 'auto';
+      videoRowContainer.style.top = '20px';
+      videoRowContainer.style.bottom = 'auto';
+      videoRowContainer.style.width = '100%';
+      videoRowContainer.style.height = 'auto';
+      videoRowContainer.style.maxHeight = 'none';
+      videoRowContainer.style.overflowY = 'visible';
+      videoRowContainer.style.justifyContent = 'center';
+      
+      // Reset video margins
+      const allVideos = videoRowContainer.querySelectorAll('video');
+      allVideos.forEach(video => {
+        (video as HTMLElement).style.marginBottom = '0';
+      });
+    }
+    
+    // Update overlay positions after layout change
+    setTimeout(() => {
+      this.updateOverlayPositions(this.myVideo);
+      
+      [...this.peers.entries(), ...this.onCalledPeers.entries()].forEach(([id, { video }]) => {
+        this.updateOverlayPositions(video);
+      });
+    }, 100);
+  }
+
   // Reposition peer videos to left and right sides
-  private repositionPeerVideos() {
+  private repositionPeerVideos(layout: 'row' | 'column' = 'row') {
     console.log('Repositioning peer videos');
     
     // Get all peers from both maps
@@ -801,13 +908,20 @@ export default class WebRTC {
       document.body.removeChild(this.myVideo);
     }
     
-    // Determine where to insert your video (in the middle)
-    const middleIndex = Math.floor(allPeers.length / 2);
+    // Determine where to insert your video
+    let myVideoPosition = 0;
+    if (layout === 'row') {
+      // In row layout, put your video in the middle
+      myVideoPosition = Math.floor(allPeers.length / 2);
+    } else {
+      // In column layout, put your video at the top
+      myVideoPosition = 0;
+    }
     
     // Add all videos to the container in the correct order
     for (let i = 0; i <= allPeers.length; i++) {
-      if (i === middleIndex) {
-        // Add your video in the middle
+      if (i === myVideoPosition) {
+        // Add your video
         videoRowContainer.appendChild(this.myVideo);
       }
       
@@ -817,6 +931,11 @@ export default class WebRTC {
         // Reset peer video styles for flex layout
         video.style.position = 'static';
         video.style.margin = '0';
+        
+        // For column layout, add bottom margin except for the last video
+        if (layout === 'column' && i < allPeers.length - 1) {
+          video.style.marginBottom = '10px';
+        }
         
         // Remove from body if it's there
         if (video.parentElement === document.body) {
@@ -828,6 +947,13 @@ export default class WebRTC {
       }
     }
     
+    // Set the layout direction
+    if (layout === 'column') {
+      this.switchVideoLayout('column');
+    } else {
+      this.switchVideoLayout('row');
+    }
+    
     // Update overlay positions after repositioning
     setTimeout(() => {
       this.updateOverlayPositions(this.myVideo);
@@ -836,7 +962,7 @@ export default class WebRTC {
       });
     }, 50);
     
-    console.log(`Video row container width: ${totalWidth}px, starting at: ${startX}px`);
+    console.log(`Video container configured for ${layout} layout`);
   }
 
   // method to remove video stream (when we are the host of the call)
@@ -1019,6 +1145,35 @@ export default class WebRTC {
       }
     })
     
+    // Create layout toggle button
+    const layoutButton = document.createElement('div');
+    layoutButton.className = 'control-icon layout-toggle';
+    layoutButton.innerHTML = '<i class="fas fa-th-list"></i>'; // Column layout icon
+    layoutButton.style.cursor = 'pointer';
+    layoutButton.style.color = 'white';
+    layoutButton.style.fontSize = '24px';
+    layoutButton.style.width = '40px';
+    layoutButton.style.height = '40px';
+    layoutButton.style.display = 'flex';
+    layoutButton.style.alignItems = 'center';
+    layoutButton.style.justifyContent = 'center';
+    layoutButton.title = 'Toggle video layout';
+    
+    // Track current layout
+    let currentLayout: 'row' | 'column' = 'row';
+    
+    layoutButton.addEventListener('click', () => {
+      currentLayout = currentLayout === 'row' ? 'column' : 'row';
+      this.repositionPeerVideos(currentLayout);
+      
+      // Update icon
+      if (currentLayout === 'column') {
+        layoutButton.innerHTML = '<i class="fas fa-th"></i>'; // Grid icon for row layout
+      } else {
+        layoutButton.innerHTML = '<i class="fas fa-th-list"></i>'; // List icon for column layout
+      }
+    });
+    
     // Create cut/reload button
     const cutButton = document.createElement('div')
     cutButton.className = 'control-icon cut-call'
@@ -1049,6 +1204,7 @@ export default class WebRTC {
     // Add controls to container
     this.controlsContainer.appendChild(micButton)
     this.controlsContainer.appendChild(videoButton)
+    this.controlsContainer.appendChild(layoutButton)
     this.controlsContainer.appendChild(cutButton)
     
     // Add Font Awesome if not already included

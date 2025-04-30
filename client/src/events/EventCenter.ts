@@ -16,4 +16,12 @@ export enum Event {
   UPDATE_DIALOG_BUBBLE = 'update-dialog-bubble',
   PLAYER_VIDEO_STATE_CHANGED = 'player-video-state-changed',
   PLAYER_AUDIO_STATE_CHANGED = 'player-audio-state-changed',
+  
+  // Layout events for video display
+  SCREEN_SHARING_STARTED = 'screen_sharing_started',
+  SCREEN_SHARING_STOPPED = 'screen_sharing_stopped',
+  WHITEBOARD_ACTIVATED = 'whiteboard_activated',
+  WHITEBOARD_DEACTIVATED = 'whiteboard_deactivated',
+  GAME_STARTED = 'game_started',
+  GAME_STOPPED = 'game_stopped',
 }
