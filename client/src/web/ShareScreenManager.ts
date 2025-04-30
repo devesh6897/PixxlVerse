@@ -56,6 +56,16 @@ export default class ShareScreenManager {
         // https://stackoverflow.com/a/25179198
         const track = stream.getVideoTracks()[0]
         if (track) {
+          // Try to improve video quality if possible
+          try {
+            const capabilities = track.getCapabilities();
+            if (capabilities) {
+              console.log("Screen share capabilities:", capabilities);
+            }
+          } catch (e) {
+            console.log("Could not get screen share capabilities", e);
+          }
+          
           track.onended = () => {
             this.stopScreenShare()
           }

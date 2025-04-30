@@ -81,18 +81,23 @@ export default class WebRTC {
     // ask the browser to get user media
     navigator.mediaDevices
       ?.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        },
+        video: true,
+        audio: true
       })
       .then((stream) => {
         this.myStream = stream
+        
+        // Try to improve video quality after getting the stream
+        try {
+          const videoTrack = stream.getVideoTracks()[0];
+          if (videoTrack) {
+            console.log("Video track constraints:", videoTrack.getConstraints());
+            console.log("Video track settings:", videoTrack.getSettings());
+          }
+        } catch (e) {
+          console.log("Could not log video track info", e);
+        }
+        
         this.addVideoStream(this.myVideo, this.myStream)
         this.setUpButtons()
         store.dispatch(setVideoConnected(true))
