@@ -1,0 +1,131 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: #121212; 
+}
+
+canvas {
+  display: block;
+}
+
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: rgb(248, 244, 3);
+  font-family: 'Arial', sans-serif;
+  z-index: 5;
+}
+
+#howToPlayModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgb(182, 39, 39);
+  padding: 20px;
+  z-index: 20; 
+  display: none;
+}
+
+#introScreen {
+  display: flex;
+  flex-direction: column; 
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: rgba(182,39,39);
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 10;
+  color: white;
+}
+
+#gameTitle {
+  font-size: 60px; 
+  margin-top: 20px;
+  margin-bottom: 100px; 
+  animation: fadeIn 1s ease; 
+}
+
+.button {
+  padding: 15px 30px;
+  font-size: 20px;
+  color: white;
+  background-color: #007BFF;
+  border: none;
+  border-radius: 10px; 
+  cursor: pointer;
+  margin: 10px 0; 
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s; 
+}
+
+.button:hover {
+  background-color: #0056b3; 
+  transform: scale(1.05); 
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); 
+}
+
+.button:active {
+  transform: scale(0.95); 
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal-content {
+  position: relative;
+  margin: 15% auto;
+  padding: 20px;
+  background-color: white;
+  width: 80%;
+  max-width: 600px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 24px;
+}
+
+#scoreContainer {
+  position: absolute;
+  top: 10px;
+  left: 750px;
+  color: white;
+  font-size: 20px;
+
+}
+
+#livesContainer {
+  position: absolute;
+  top: 30px;
+  right: 685px;
+  color: white;
+  font-size: 20px;
+  display: block;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px); 
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0); 
+  }
+}

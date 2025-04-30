@@ -8,6 +8,7 @@ import Chair from '../items/Chair'
 import Computer from '../items/Computer'
 import Whiteboard from '../items/Whiteboard'
 import VendingMachine from '../items/VendingMachine'
+import PoolTable from '../items/PoolTable'
 import '../characters/MyPlayer'
 import '../characters/OtherPlayer'
 import MyPlayer from '../characters/MyPlayer'
@@ -128,6 +129,11 @@ export default class Game extends Phaser.Scene {
       this.addObjectFromTiled(vendingMachines, obj, 'vendingmachines', 'vendingmachine')
     })
 
+    // Add a pool table to the scene
+    const poolTables = this.physics.add.staticGroup({ classType: PoolTable })
+    const poolTable = poolTables.get(400, 300, 'generic', 'table') as PoolTable
+    poolTable.setScale(1.5)
+    
     // import other objects from Tiled map to Phaser
     this.addGroupFromTiled('Wall', 'tiles_wall', 'FloorAndGround', false)
     this.addGroupFromTiled('Objects', 'office', 'Modern_Office_Black_Shadow', false)
@@ -146,7 +152,7 @@ export default class Game extends Phaser.Scene {
 
     this.physics.add.overlap(
       this.playerSelector,
-      [chairs, computers, whiteboards, vendingMachines],
+      [chairs, computers, whiteboards, vendingMachines, poolTables],
       this.handleItemSelectorOverlap,
       undefined,
       this

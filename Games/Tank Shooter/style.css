@@ -1,0 +1,229 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: "Doto", sans-serif;
+  }
+  canvas {
+    display: block;
+}
+.pause-screen {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1000px;
+  padding: 30px;
+  height: 350px;
+  background-color: rgba(255, 255, 255, 0.488);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+  display: none;
+  animation: fadeIn 0.3s ease-out;
+}
+.pause-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  display: none;
+  backdrop-filter: blur(3px);
+}
+  #ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: rgb(248, 244, 3);
+    font-family: "Doto", sans-serif;
+    z-index: 5;
+  }
+  #introScreen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: url('./images/background.jpg') no-repeat center center;
+    background-size: cover;
+    background-color: black;
+    display: flex;
+    font-family: "Doto", sans-serif;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    font-weight: bolder;
+    color: rgb(0, 0, 0);
+    
+}
+
+@keyframes fadeIn {
+  from {
+      opacity: 0;
+      transform: translate(-50%, -55%);
+  }
+
+  to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+  }
+}
+#gameTitle {
+    
+    font-weight: bolder;
+  }
+
+  #playButton {
+    padding: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    background-color: #5acdd5;
+    font-family: "Doto", sans-serif;
+    width: 500px;
+    color: rgb(0, 0, 0);
+    border: rgb(0, 0, 0);
+    border-width: 10px;
+    border-radius: 15px;
+    font-weight: bolder;
+  }
+
+  #howToPlayButton {
+    padding: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    background-color: #5acdd5;
+    font-family: "Doto", sans-serif;
+    width: 500px;
+    color: rgb(0, 0, 0);
+    border: rgb(255, 255, 255);
+    border-radius: 15px;
+    font-weight: bolder;
+
+  }
+  #exitButton {
+    padding: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    background-color: #5acdd5;
+    font-family: "Doto", sans-serif;
+    width: 500px;
+    color: rgb(0, 0, 0);
+    border: rgb(255, 255, 255);
+    border-radius: 15px;
+    font-weight: bolder;
+
+    
+  }
+
+
+  
+  #resumeButton {
+    padding: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    background-color: #5acdd5;
+    font-family: "Doto", sans-serif;
+    width: 500px;
+    color: rgb(0, 0, 0);
+    border: rgb(0, 0, 0);
+    border-width: 10px;
+    border-radius: 15px;
+    font-weight: bolder;
+    margin-bottom: 15px;
+  }
+
+  #restartFromPause {
+    padding: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    background-color: #5acdd5;
+    font-family: "Doto", sans-serif;
+    width: 500px;
+    color: rgb(0, 0, 0);
+    border: rgb(255, 255, 255);
+    border-radius: 15px;
+    font-weight: bolder;
+    margin-bottom: 15px;
+
+
+  }
+  #mainMenuFromPause {
+    padding: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    background-color: #5acdd5;
+    font-family: "Doto", sans-serif;
+    width: 500px;
+    color: rgb(0, 0, 0);
+    border: rgb(255, 255, 255);
+    border-radius: 15px;
+    font-weight: bolder;
+
+    
+  }
+
+  
+
+
+  #gameOverScreen{
+    background-color: rgba(0, 0, 0, 0.849);
+    padding-top: 290px;
+    padding-bottom: 290px;
+    display: none;
+}
+.game-over-content {
+  text-align: center;
+}
+
+.game-over-title {
+  font-size: 48px;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  margin-bottom: 20px;
+}
+
+.score-display {
+  font-size: 28px;
+  margin: 15px 0;
+  color: rgb(0, 0, 0);
+}
+
+.high-score-display {
+  font-size: 24px;
+  margin: 15px 0;
+  color: #000000;
+}
+
+
+#restartButton {
+  padding: 20px;
+  font-size: 24px;
+  cursor: pointer;
+  background-color: #5acdd5;
+  font-family: "Doto", sans-serif;
+  width: 500px;
+  color: rgb(0, 0, 0);
+  border: rgb(255, 255, 255);
+  border-radius: 15px;
+  font-weight: bolder;
+  margin-bottom: 15px;
+  display: block;
+margin-left: 518px;
+
+}
+#mainMenuButton {
+  padding: 20px;
+  font-size: 24px;
+  cursor: pointer;
+  background-color: #5acdd5;
+  font-family: "Doto", sans-serif;
+  width: 500px;
+  color: rgb(0, 0, 0);
+  border: rgb(255, 255, 255);
+  border-radius: 15px;
+  font-weight: bolder;
+
+  
+}

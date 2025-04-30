@@ -1,0 +1,143 @@
+:root {
+  --player1-color:Blue;
+  --player2-color:red;
+  --player3-color:green;
+  --player4-color:yellow;
+  --bg-color:black;
+  --board-color:lightgrey;
+  --star-color:BlueViolet;
+}
+
+body {
+  background-color: darkgrey;
+}
+
+
+.board {
+  background-color: var(--bg-color);
+  /* height: 500px;
+  width: 500px; */
+  padding: 10px;
+  width: 90vmin;
+  height: 90vmin;
+  z-index: -99;
+  margin: 0 auto;
+  border-radius: 1.5%;
+}
+
+.grid-container {
+  width: inherit;
+  height: inherit;
+}
+
+.grid-container > div {
+  /* padding: 20px 0; */
+  width: auto;
+  height: auto;
+  text-align: center;
+  z-index: 1;
+}
+
+div[class^="BL"], div[class^="TL"], div[class^="TR"], div[class^="BR"] {
+  background-color: var(--board-color);
+  z-index: 2;
+}
+div[class^="eT"] {
+  background-color: var(--player2-color);
+  z-index: 2;
+}
+
+div[class^="eR"] {
+  background-color: var(--player3-color);
+  z-index: 2;
+}
+
+div[class^="eB"] {
+  background-color: var(--player4-color);
+  z-index: 2;
+}
+
+div[class^="eL"] {
+  background-color: var(--player1-color);
+  z-index: 2;
+}
+
+div[class="TL0"] {
+  background-color: var(--player1-color);
+  z-index: 2;
+}
+
+div[class="TR0"] {
+  background-color: var(--player2-color);
+  z-index: 2;
+}
+
+div[class="BR0"] {
+  background-color: var(--player3-color);
+  z-index: 2;
+}
+
+div[class="BL0"] {
+  background-color: var(--player4-color);
+  z-index: 2;
+}
+
+div[class^="spawnTL"] {
+  background-color: var(--player1-color);
+  z-index: 4;
+  border-radius: 30%;
+}
+
+div[class^="spawnTR"] {
+  background-color: var(--player2-color);
+  z-index: 4;
+  border-radius: 30%;
+}
+
+div[class^="spawnBR"] {
+  background-color: var(--player3-color);
+  z-index: 4;
+  border-radius: 30%;
+}
+
+div[class^="spawnBL"] {
+  background-color: var(--player4-color);
+  z-index: 4;
+  border-radius: 30%;
+}
+
+/* div[class^="spawn"]:not(.playerPiece, .spawn-TL, .spawn-TR, .spawn-BR, .spawn-BL) {
+  filter: brightness(1.2) saturate(0.1);
+} */
+
+.spawn-TL {
+  background-color: var(--player1-color);
+  filter: brightness(0.9) saturate(0.3);
+  z-index: 3
+}
+
+.spawn-TR {
+  background-color: var(--player2-color);
+  filter: brightness(0.9) saturate(0.3);
+  z-index: 3
+}
+
+.spawn-BR {
+  background-color: var(--player3-color);
+  filter: brightness(0.8) saturate(0.3);
+  z-index: 3
+}
+
+.spawn-BL {
+  background-color: var(--player4-color);
+  filter: brightness(0.8) saturate(0.3);
+  z-index: 3
+}
+
+
+.midt {
+  /* background-image: radial-gradient(circle, violet,red,orange,yellow,green,blue,indigo); */
+  background: linear-gradient(180deg, var(--player2-color), transparent 50%, var(--player4-color)),
+  linear-gradient(90deg, var(--player1-color), transparent 50%, var(--player3-color)) #888;
+  z-index: 3;
+}

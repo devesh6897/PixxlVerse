@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" media="screen" href="shooter.css" />
+  <title>WebGL Shooter Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&family=Oxanium:wght@200..800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="shooter.css">
+
+
+</head>
+<body>
+  <div id="introScreen">
+    <h1 id="gameTitle" >TANK SHOOTER</h1> <!-- Game title -->
+    <button class="button" id="playButton" >START</button>
+    <button class="button" id="howToPlayButton">ABOUT</button>
+    <button class="button" id="exitButton">Exit</button>
+  </div>
+
+  <!-- Instructions Modal -->
+  <div id="introoverlay" style="background-color: #e7e7e7;color: black; font-weight: bold;"></div>
+
+  <div id="howToPlayModal" class="modal" style="background-color: rgb(134, 217, 227); color: black;">
+    <div class="modal-content">
+      <span id="closeHowToPlay" class="close">&times;</span>
+      <h2  style=" color: black; font-weight: bolder;">About Tank Shooter</h2>
+            <p  style=" color: black; font-weight: bolder;">Welcome to Tank Shooter! Navigate through space, destroy Box.</p>
+      <button id="closeInstructionsButton"  style=" color: black; font-weight: bolder;">Close</button>
+    </div>
+  </div>
+  
+
+  <!-- Pause Screen -->
+  <div id="pauseOverlay" class="pause-overlay"style="background-color: #e7e7e7;color: black; font-weight: bold;"></div>
+  <div id="pauseScreen" class="pause-screen">
+      <h2 class="pause-title">Game Paused</h2>
+      <button id="resumeButton" class="menu-button"style="background-color: #008CBA;color: black; font-weight: bold;">Resume</button>
+      <button id="restartFromPause" class="menu-button"style="background-color: #008CBA;color: black; font-weight: bold;">Start Again</button>
+      <button id="mainMenuFromPause" class="menu-button"style="background-color: #008CBA;color: black; font-weight: bold;">Main Menu</button>
+  </div>
+
+
+
+      <!-- Game Over Screen -->
+      <div id="gameOverScreen" class="screen" style="display: none;">
+        <div class="game-over-content">
+            <h1 class="game-over-title">Game Over!</h1>
+            <div id="finalScore" class="score-display"style="color: white; font-weight: bold;">Score: 0</div>
+            <div id="finalHighScore" class="high-score-display"style="background-color: #black;color: white; font-weight: bold;">High Score: 0</div>
+            <button id="restartButton" class="menu-button"style="background-color: #008CBA;color: black; font-weight: bold;">Play Again</button>
+            <button id="mainMenuButton" class="menu-button" style="padding-top: 45px;background-color: #008CBA;color: black; font-weight: bold;">Main Menu</button>
+        </div>
+    </div>
+
+
+    
+  <canvas id="gameCanvas";
+
+  ></canvas>
+  
+  <div id="scoreContainer">Score: <span id="score">0</span></div>
+  <div id="livesContainer">Lives: <span id="lives">3</span></div>
+  
+  <script src="shooter.js"></script>
+</body>
+
+</html>

@@ -7,10 +7,12 @@ import Network from '../services/Network'
 import Chair from '../items/Chair'
 import Computer from '../items/Computer'
 import Whiteboard from '../items/Whiteboard'
+import PoolTable from '../items/PoolTable'
 
 import { phaserEvents, Event } from '../events/EventCenter'
 import store from '../stores'
 import { pushPlayerJoinedMessage } from '../stores/ChatStore'
+import { openGameWindow } from '../stores/GameWindowStore'
 import { ItemType } from '../../../types/Items'
 import { NavKeys } from '../../../types/KeyboardState'
 import { JoystickMovement } from '../components/Joystick'
@@ -73,12 +75,19 @@ export default class MyPlayer extends Player {
           // hacky and hard-coded, but leaving it as is for now
           const url = 'https://www.buymeacoffee.com/skyoffice'
           openURL(url)
+          this.scene.sound.play('coin')
           break
       }
     }
 
     switch (this.playerBehavior) {
       case PlayerBehavior.IDLE:
+        // if press E in front of a pool table, open the game window
+        if (Phaser.Input.Keyboard.JustDown(keyE) && item?.itemType === ItemType.POOLTABLE) {
+          store.dispatch(openGameWindow())
+          return
+        }
+        
         // if press E in front of selected chair
         if (Phaser.Input.Keyboard.JustDown(keyE) && item?.itemType === ItemType.CHAIR) {
           const chairItem = item as Chair
@@ -123,6 +132,25 @@ export default class MyPlayer extends Player {
           chairItem.setDialogBox('Press E to leave')
           this.chairOnSit = chairItem
           this.playerBehavior = PlayerBehavior.SITTING
+          return
+        }
+        // if press E in front of selected computer
+        if (Phaser.Input.Keyboard.JustDown(keyE) && item?.itemType === ItemType.COMPUTER) {
+          const computerItem = item as Computer
+          computerItem.clearDialogBox()
+          computerItem.setDialogBox('Press E to stop using')
+          computerItem.openDialog(this.playerId, network)
+          this.playerBehavior = PlayerBehavior.TYPING
+          return
+        }
+
+        // if press E in front of selected whiteboard
+        if (Phaser.Input.Keyboard.JustDown(keyE) && item?.itemType === ItemType.WHITEBOARD) {
+          const whiteboardItem = item as Whiteboard
+          whiteboardItem.clearDialogBox()
+          whiteboardItem.setDialogBox('Press E to stop using')
+          whiteboardItem.openDialog(network)
+          this.playerBehavior = PlayerBehavior.TYPING
           return
         }
 
@@ -193,6 +221,23 @@ export default class MyPlayer extends Player {
           playerSelector.setPosition(this.x, this.y)
           playerSelector.update(this, cursors)
           network.updatePlayer(this.x, this.y, this.anims.currentAnim.key)
+        }
+        break
+        
+      case PlayerBehavior.TYPING:
+        // back to idle if player press E while typing
+        if (Phaser.Input.Keyboard.JustDown(keyE)) {
+          this.playerBehavior = PlayerBehavior.IDLE
+          if (item) {
+            item.clearDialogBox()
+            if (item.itemType === ItemType.COMPUTER) {
+              item.setDialogBox('Press R to use computer')
+            } else {
+              item.setDialogBox('Press R to use whiteboard')
+            }
+          }
+          playerSelector.setPosition(this.x, this.y)
+          playerSelector.update(this, cursors)
         }
         break
     }
