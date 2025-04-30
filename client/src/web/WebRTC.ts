@@ -15,13 +15,30 @@ export default class WebRTC {
 
   constructor(userId: string, network: Network) {
     const sanitizedId = this.replaceInvalidId(userId)
-    this.myPeer = new Peer(sanitizedId)
+    this.myPeer = new Peer(sanitizedId, {
+      debug: 3,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      }
+    })
     this.network = network
     console.log('userId:', userId)
     console.log('sanitizedId:', sanitizedId)
     this.myPeer.on('error', (err) => {
       console.log(err.type)
       console.error(err)
+      
+      // Attempt to reconnect on certain errors
+      if (err.type === 'network' || err.type === 'disconnected') {
+        setTimeout(() => {
+          console.log('Attempting to reconnect peer...')
+          this.myPeer.reconnect()
+        }, 3000)
+      }
     })
 
     // mute your own video stream (you don't want to hear yourself)
@@ -64,8 +81,15 @@ export default class WebRTC {
     // ask the browser to get user media
     navigator.mediaDevices
       ?.getUserMedia({
-        video: true,
-        audio: true,
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        },
       })
       .then((stream) => {
         this.myStream = stream
@@ -75,6 +99,7 @@ export default class WebRTC {
         this.network.videoConnected()
       })
       .catch((error) => {
+        console.error('Error accessing media devices:', error)
         if (alertOnError) window.alert('No webcam or microphone found, or permission is blocked')
       })
   }
