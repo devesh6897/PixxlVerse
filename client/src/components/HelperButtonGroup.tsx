@@ -143,10 +143,7 @@ export default function HelperButtonGroup() {
             <RoomDescription>
               <ArrowRightIcon /> Description: {roomDescription}
             </RoomDescription>
-            <p className="tip">
-              <LightbulbIcon />
-              Shareable link coming up 😄
-            </p>
+         
           </Wrapper>
         )}
         {showControlGuide && (

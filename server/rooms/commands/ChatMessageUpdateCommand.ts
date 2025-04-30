@@ -1,6 +1,6 @@
 import { Command } from '@colyseus/command'
 import { Client } from 'colyseus'
-import { IOfficeState } from '../../../types/state'
+import { currentstate } from '../../../types/state'
 import { ChatMessage } from '../schema/OfficeState'
 
 type Payload = {
@@ -8,7 +8,7 @@ type Payload = {
   content: string
 }
 
-export default class ChatMessageUpdateCommand extends Command<IOfficeState, Payload> {
+export default class ChatMessageUpdateCommand extends Command<currentstate, Payload> {
   execute(data: Payload) {
     const { client, content } = data
     const player = this.room.state.players.get(client.sessionId)

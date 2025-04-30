@@ -1,7 +1,7 @@
 import { Schema, ArraySchema, SetSchema, MapSchema, type } from '@colyseus/schema'
 import {
   IPlayer,
-  IOfficeState,
+  currentstate,
   IComputer,
   IWhiteboard,
   IChatMessage,
@@ -33,7 +33,7 @@ export class ChatMessage extends Schema implements IChatMessage {
   @type('string') content = ''
 }
 
-export class OfficeState extends Schema implements IOfficeState {
+export class OfficeState extends Schema implements currentstate {
   @type({ map: Player })
   players = new MapSchema<Player>()
 
