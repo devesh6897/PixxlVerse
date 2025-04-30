@@ -131,8 +131,9 @@ export default class Game extends Phaser.Scene {
 
     // Add a pool table to the scene
     const poolTables = this.physics.add.staticGroup({ classType: PoolTable })
-    const poolTable = poolTables.get(400, 300, 'generic', 'table') as PoolTable
-    poolTable.setScale(1.5)
+    const poolTable = poolTables.get(300, 250, 'generic', 'table') as PoolTable
+    poolTable.setScale(0.0)
+    poolTable.body.setSize(poolTable.width * 3.0, poolTable.height * 3.0)
     
     // import other objects from Tiled map to Phaser
     this.addGroupFromTiled('Wall', 'tiles_wall', 'FloorAndGround', false)
