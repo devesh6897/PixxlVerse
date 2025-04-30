@@ -1,5 +1,5 @@
 import { Client, Room } from 'colyseus.js'
-import { IComputer, IOfficeState, IPlayer, IWhiteboard } from '../../../types/IOfficeState'
+import { IComputer, currentstate, IPlayer, IWhiteboard } from '../../../types/state'
 import { Message } from '../../../types/Messages'
 import { IRoomData, RoomType } from '../../../types/Rooms'
 import { ItemType } from '../../../types/Items'
@@ -23,7 +23,7 @@ import { setWhiteboardUrls } from '../stores/WhiteboardStore'
 
 export default class Network {
   private client: Client
-  private room?: Room<IOfficeState>
+  private room?: Room<currentstate>
   private lobby!: Room
   webRTC?: WebRTC
 
