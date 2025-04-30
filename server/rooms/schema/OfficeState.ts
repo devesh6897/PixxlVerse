@@ -14,6 +14,8 @@ export class Player extends Schema implements IPlayer {
   @type('string') anim = 'adam_idle_down'
   @type('boolean') readyToConnect = false
   @type('boolean') videoConnected = false
+  @type('boolean') audioEnabled = true
+  @type('boolean') videoEnabled = true
 }
 
 export class Computer extends Schema implements IComputer {

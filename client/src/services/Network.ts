@@ -241,6 +241,11 @@ export default class Network {
     this.room?.send(Message.UPDATE_PLAYER_NAME, { name: currentName })
   }
 
+  // method to send player properties to Colyseus server
+  updatePlayerProps(props: { [key: string]: any }) {
+    this.room?.send(Message.UPDATE_PLAYER_PROPS, props)
+  }
+
   // method to send ready-to-connect signal to Colyseus server
   readyToConnect() {
     this.room?.send(Message.READY_TO_CONNECT)

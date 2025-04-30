@@ -21,6 +21,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   playerContainer: Phaser.GameObjects.Container
   private playerDialogBubble: Phaser.GameObjects.Container
   private timeoutID?: number
+  
+  // Track audio and video status
+  videoEnabled = true
+  audioEnabled = true
 
   constructor(
     scene: Phaser.Scene,
@@ -59,6 +63,24 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     playContainerBody
       .setSize(this.width * collisionScale[0], this.height * collisionScale[1])
       .setOffset(-8, this.height * (1 - collisionScale[1]) + 6)
+  }
+
+  // Methods to update audio and video status
+  setAudioEnabled(enabled: boolean) {
+    this.audioEnabled = enabled;
+  }
+
+  setVideoEnabled(enabled: boolean) {
+    this.videoEnabled = enabled;
+  }
+
+  // Get audio and video status
+  isAudioEnabled(): boolean {
+    return this.audioEnabled;
+  }
+
+  isVideoEnabled(): boolean {
+    return this.videoEnabled;
   }
 
   updateDialogBubble(content: string) {

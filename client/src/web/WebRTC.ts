@@ -2,6 +2,7 @@ import Peer from 'peerjs'
 import Network from '../services/Network'
 import store from '../stores'
 import { setVideoConnected } from '../stores/UserStore'
+import { phaserEvents, Event } from '../events/EventCenter'
 
 export default class WebRTC {
   private myPeer: Peer
@@ -120,8 +121,62 @@ export default class WebRTC {
     this.myVideo.style.zIndex = '2'
     this.myVideo.style.background = 'rgba(0,0,0,0.2)'
 
+    // Setup event listeners for player video and audio state changes
+    this.setupStateChangeListeners();
+
     // config peerJS
     this.initialize()
+  }
+
+  // Setup listeners for player state changes
+  private setupStateChangeListeners() {
+    // Listen for player video state changes
+    phaserEvents.on(Event.PLAYER_VIDEO_STATE_CHANGED, (playerId: string, enabled: boolean) => {
+      console.log(`Player ${playerId} video state changed to ${enabled ? 'enabled' : 'disabled'}`);
+      
+      // Find the peer's video element
+      let peerVideo: HTMLVideoElement | undefined;
+      
+      // Check in peers map
+      if (this.peers.has(playerId)) {
+        peerVideo = this.peers.get(playerId)?.video;
+      }
+      
+      // Check in onCalledPeers map
+      if (!peerVideo && this.onCalledPeers.has(playerId)) {
+        peerVideo = this.onCalledPeers.get(playerId)?.video;
+      }
+      
+      // If we found the video element, update its status
+      if (peerVideo) {
+        this.updateVideoStatus(peerVideo, !enabled);
+        this.updateOverlayPositions(peerVideo);
+      }
+    });
+    
+    // Listen for player audio state changes
+    phaserEvents.on(Event.PLAYER_AUDIO_STATE_CHANGED, (playerId: string, enabled: boolean) => {
+      console.log(`Player ${playerId} audio state changed to ${enabled ? 'enabled' : 'disabled'}`);
+      
+      // Find the peer's video element
+      let peerVideo: HTMLVideoElement | undefined;
+      
+      // Check in peers map
+      if (this.peers.has(playerId)) {
+        peerVideo = this.peers.get(playerId)?.video;
+      }
+      
+      // Check in onCalledPeers map
+      if (!peerVideo && this.onCalledPeers.has(playerId)) {
+        peerVideo = this.onCalledPeers.get(playerId)?.video;
+      }
+      
+      // If we found the video element, update its status
+      if (peerVideo) {
+        this.updateMicStatus(peerVideo, !enabled);
+        this.updateOverlayPositions(peerVideo);
+      }
+    });
   }
 
   // Add overlays to a video without changing its structure
@@ -142,7 +197,7 @@ export default class WebRTC {
     nameOverlay.style.padding = '2px 8px';
     nameOverlay.style.borderRadius = '4px';
     nameOverlay.style.fontSize = '12px';
-    nameOverlay.style.zIndex = '10';
+    nameOverlay.style.zIndex = '100';
     document.body.appendChild(nameOverlay);
     
     // Add video status overlay (center)
@@ -154,7 +209,7 @@ export default class WebRTC {
     videoStatusOverlay.style.color = 'white';
     videoStatusOverlay.style.padding = '8px';
     videoStatusOverlay.style.borderRadius = '50%';
-    videoStatusOverlay.style.zIndex = '10';
+    videoStatusOverlay.style.zIndex = '100';
     videoStatusOverlay.style.display = 'none'; // Initially hidden
     document.body.appendChild(videoStatusOverlay);
     
@@ -163,13 +218,16 @@ export default class WebRTC {
     micStatusOverlay.className = `mic-status-overlay-${videoId}`;
     micStatusOverlay.innerHTML = '<i class="fas fa-microphone-slash"></i>';
     micStatusOverlay.style.position = 'fixed';
-    micStatusOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    micStatusOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
     micStatusOverlay.style.color = 'white';
     micStatusOverlay.style.padding = '4px';
     micStatusOverlay.style.borderRadius = '50%';
-    micStatusOverlay.style.zIndex = '10';
+    micStatusOverlay.style.zIndex = '100';
     micStatusOverlay.style.display = 'none'; // Initially hidden
     document.body.appendChild(micStatusOverlay);
+    
+    // Ensure Font Awesome is loaded
+    this.ensureFontAwesomeLoaded();
     
     // Update overlay positions when video position changes
     this.updateOverlayPositions(video);
@@ -180,13 +238,17 @@ export default class WebRTC {
   // Update overlay positions based on video position
   private updateOverlayPositions(video: HTMLVideoElement) {
     const videoId = video.id;
+    if (!videoId) return;
+    
     const videoRect = video.getBoundingClientRect();
+    if (videoRect.width === 0 || videoRect.height === 0) return; // Video not visible yet
     
     // Update name overlay
     const nameOverlay = document.querySelector(`.name-overlay-${videoId}`) as HTMLElement;
     if (nameOverlay) {
       nameOverlay.style.top = `${videoRect.top + 5}px`;
       nameOverlay.style.left = `${videoRect.left + 5}px`;
+      nameOverlay.style.zIndex = '10';
     }
     
     // Update video status overlay
@@ -194,6 +256,12 @@ export default class WebRTC {
     if (videoStatusOverlay) {
       videoStatusOverlay.style.top = `${videoRect.top + (videoRect.height / 2) - 15}px`;
       videoStatusOverlay.style.left = `${videoRect.left + (videoRect.width / 2) - 15}px`;
+      videoStatusOverlay.style.zIndex = '10';
+      
+      // Make sure it's visible if display is set to block
+      if (videoStatusOverlay.style.display === 'block') {
+        videoStatusOverlay.style.visibility = 'visible';
+      }
     }
     
     // Update mic status overlay
@@ -201,6 +269,12 @@ export default class WebRTC {
     if (micStatusOverlay) {
       micStatusOverlay.style.top = `${videoRect.bottom - 25}px`;
       micStatusOverlay.style.left = `${videoRect.right - 25}px`;
+      micStatusOverlay.style.zIndex = '10';
+      
+      // Make sure it's visible if display is set to block
+      if (micStatusOverlay.style.display === 'block') {
+        micStatusOverlay.style.visibility = 'visible';
+      }
     }
   }
   
@@ -226,6 +300,9 @@ export default class WebRTC {
     
     const overlay = document.querySelector(`.video-status-overlay-${videoId}`) as HTMLElement;
     if (overlay) {
+      console.log(`Setting video status for ${videoId} to ${isOff ? 'off' : 'on'}`);
+      
+      // Just use the value passed in - trust the player state
       overlay.style.display = isOff ? 'block' : 'none';
       
       // Make sure it's correctly positioned in the center of the video
@@ -233,6 +310,10 @@ export default class WebRTC {
         const videoRect = video.getBoundingClientRect();
         overlay.style.top = `${videoRect.top + (videoRect.height / 2) - 15}px`;
         overlay.style.left = `${videoRect.left + (videoRect.width / 2) - 15}px`;
+        overlay.style.visibility = 'visible';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        overlay.style.padding = '8px';
+        overlay.style.zIndex = '100';
       }
     }
   }
@@ -244,6 +325,9 @@ export default class WebRTC {
     
     const overlay = document.querySelector(`.mic-status-overlay-${videoId}`) as HTMLElement;
     if (overlay) {
+      console.log(`Setting mic status for ${videoId} to ${isMuted ? 'muted' : 'unmuted'}`);
+      
+      // Just use the value passed in - trust the player state
       overlay.style.display = isMuted ? 'block' : 'none';
       
       // Make sure it's correctly positioned in the bottom right of the video
@@ -251,6 +335,10 @@ export default class WebRTC {
         const videoRect = video.getBoundingClientRect();
         overlay.style.top = `${videoRect.bottom - 25}px`;
         overlay.style.left = `${videoRect.right - 25}px`;
+        overlay.style.visibility = 'visible';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        overlay.style.padding = '4px';
+        overlay.style.zIndex = '100';
       }
     }
   }
@@ -314,48 +402,261 @@ export default class WebRTC {
 
   // Monitor remote stream tracks for mute/disable events
   private monitorRemoteStreamTracks(video: HTMLVideoElement, stream: MediaStream) {
+    console.log('Setting up monitoring for remote tracks in stream:', stream.id);
+    
     // For audio tracks
     stream.getAudioTracks().forEach(track => {
-      // Set initial state
-      this.updateMicStatus(video, !track.enabled);
+      // Define a function to check if audio is actually muted
+      // This is more reliable than just checking track.enabled
+      const checkAudioState = () => {
+        // If track is explicitly disabled, it's definitely muted
+        if (!track.enabled) return true;
+        
+        // Additional checks for audio activity could be added here
+        // For now, trust the track.enabled state, but this could be enhanced
+        return false;
+      };
+      
+      // Try to get the player state from the store
+      try {
+        // Check peers maps to find which player this belongs to
+        let playerId = '';
+        
+        // Loop through peers to find the matching stream
+        for (const [id, peer] of this.peers.entries()) {
+          const peerStream = peer.video.srcObject as MediaStream;
+          if (peerStream && peerStream.id === stream.id) {
+            playerId = id;
+            break;
+          }
+        }
+        
+        // If we still don't have it, check onCalledPeers
+        if (!playerId) {
+          for (const [id, peer] of this.onCalledPeers.entries()) {
+            const peerStream = peer.video.srcObject as MediaStream;
+            if (peerStream && peerStream.id === stream.id) {
+              playerId = id;
+              break;
+            }
+          }
+        }
+        
+        // If we found the player, get their audio state from the users list
+        if (playerId) {
+          const state = store.getState();
+          // Access the player data directly using the playerNameMap from user store
+          // as we don't have direct access to player states from the store
+          const players = state.user.playerNameMap;
+          if (players && players.has(playerId)) {
+            // For now, we can use the default state since we can't reliably get the stored state
+            console.log(`Found player ${playerId} in store, using default initial audio state`);
+            // Use track's enabled property to determine initial state
+            const initialAudioState = !track.enabled;
+            this.updateMicStatus(video, initialAudioState);
+          }
+        }
+      } catch (e) {
+        console.error('Error getting initial audio state from store:', e);
+      }
+      
+      // Set initial state based on the track state
+      const isAudioMuted = !track.enabled;
+      console.log('Initial audio track state set to:', isAudioMuted ? 'muted' : 'unmuted');
+      this.updateMicStatus(video, isAudioMuted);
       
       // Create a periodic check for track state
-      setInterval(() => {
-        this.updateMicStatus(video, !track.enabled);
-      }, 1000);
+      const audioInterval = setInterval(() => {
+        if (!video.parentElement) {
+          // Video was removed, clear interval
+          clearInterval(audioInterval);
+          return;
+        }
+        
+        const isMuted = checkAudioState();
+        this.updateMicStatus(video, isMuted);
+        this.updateOverlayPositions(video);
+      }, 500);
       
       // Standard events
       track.addEventListener('mute', () => {
+        console.log('Audio track muted event triggered');
         this.updateMicStatus(video, true);
+        this.updateOverlayPositions(video);
       });
+      
       track.addEventListener('unmute', () => {
+        console.log('Audio track unmuted event triggered');
         this.updateMicStatus(video, false);
+        this.updateOverlayPositions(video);
       });
+      
+      // Listen for track enabled/disabled changes
+      const self = this;
+      const originalEnabledGetter = Object.getOwnPropertyDescriptor(track, 'enabled')?.get;
+      const originalEnabledSetter = Object.getOwnPropertyDescriptor(track, 'enabled')?.set;
+      
+      // Only override if we can actually get the original accessors
+      if (originalEnabledGetter && originalEnabledSetter) {
+        Object.defineProperty(track, 'enabled', {
+          get: function() {
+            return originalEnabledGetter.call(this);
+          },
+          set: function(value: boolean) {
+            originalEnabledSetter.call(this, value);
+            console.log('Audio track enabled changed to:', value);
+            setTimeout(() => {
+              const isMuted = !value;
+              self.updateMicStatus(video, isMuted);
+              self.updateOverlayPositions(video);
+            }, 0);
+          }
+        });
+      }
+      
       track.addEventListener('ended', () => {
+        console.log('Audio track ended event triggered');
         this.updateMicStatus(video, true);
+        this.updateOverlayPositions(video);
+        clearInterval(audioInterval);
       });
     });
     
     // For video tracks
     stream.getVideoTracks().forEach(track => {
-      // Set initial state
-      this.updateVideoStatus(video, !track.enabled);
+      // Define a function to check if video is actually disabled
+      const checkVideoState = () => {
+        // If track is explicitly disabled, it's definitely off
+        if (!track.enabled) return true;
+        
+        // Check if there's actual video data
+        // This can help detect black frames or other issues
+        try {
+          // We can't directly check pixel data here, so rely on track.enabled
+          return false;
+        } catch (e) {
+          console.error('Error checking video data:', e);
+          return false;
+        }
+      };
+      
+      // Try to get the player state from the store
+      try {
+        // Check peers maps to find which player this belongs to
+        let playerId = '';
+        
+        // Loop through peers to find the matching stream
+        for (const [id, peer] of this.peers.entries()) {
+          const peerStream = peer.video.srcObject as MediaStream;
+          if (peerStream && peerStream.id === stream.id) {
+            playerId = id;
+            break;
+          }
+        }
+        
+        // If we still don't have it, check onCalledPeers
+        if (!playerId) {
+          for (const [id, peer] of this.onCalledPeers.entries()) {
+            const peerStream = peer.video.srcObject as MediaStream;
+            if (peerStream && peerStream.id === stream.id) {
+              playerId = id;
+              break;
+            }
+          }
+        }
+        
+        // If we found the player, get their video state from the users list
+        if (playerId) {
+          const state = store.getState();
+          // Access the player data directly using the playerNameMap from user store
+          // as we don't have direct access to player states from the store
+          const players = state.user.playerNameMap;
+          if (players && players.has(playerId)) {
+            // For now, we can use the default state since we can't reliably get the stored state
+            console.log(`Found player ${playerId} in store, using default initial video state`);
+            // Use track's enabled property to determine initial state
+            const initialVideoState = !track.enabled;
+            this.updateVideoStatus(video, initialVideoState);
+          }
+        }
+      } catch (e) {
+        console.error('Error getting initial video state from store:', e);
+      }
+      
+      // Set initial state based on the track state
+      const isVideoOff = !track.enabled;
+      console.log('Initial video track state set to:', isVideoOff ? 'off' : 'on');
+      this.updateVideoStatus(video, isVideoOff);
       
       // Create a periodic check for track state
-      setInterval(() => {
-        this.updateVideoStatus(video, !track.enabled);
-      }, 1000);
+      const videoInterval = setInterval(() => {
+        if (!video.parentElement) {
+          // Video was removed, clear interval
+          clearInterval(videoInterval);
+          return;
+        }
+        
+        const isOff = checkVideoState();
+        this.updateVideoStatus(video, isOff);
+        this.updateOverlayPositions(video);
+      }, 500);
       
       // Standard events
       track.addEventListener('mute', () => {
+        console.log('Video track muted event triggered');
         this.updateVideoStatus(video, true);
+        this.updateOverlayPositions(video);
       });
+      
       track.addEventListener('unmute', () => {
+        console.log('Video track unmuted event triggered');
         this.updateVideoStatus(video, false);
+        this.updateOverlayPositions(video);
       });
+      
+      // Listen for track enabled/disabled changes
+      const self = this;
+      const originalEnabledGetter = Object.getOwnPropertyDescriptor(track, 'enabled')?.get;
+      const originalEnabledSetter = Object.getOwnPropertyDescriptor(track, 'enabled')?.set;
+      
+      // Only override if we can actually get the original accessors
+      if (originalEnabledGetter && originalEnabledSetter) {
+        Object.defineProperty(track, 'enabled', {
+          get: function() {
+            return originalEnabledGetter.call(this);
+          },
+          set: function(value: boolean) {
+            originalEnabledSetter.call(this, value);
+            console.log('Video track enabled changed to:', value);
+            setTimeout(() => {
+              const isOff = !value;
+              self.updateVideoStatus(video, isOff);
+              self.updateOverlayPositions(video);
+            }, 0);
+          }
+        });
+      }
+      
       track.addEventListener('ended', () => {
+        console.log('Video track ended event triggered');
         this.updateVideoStatus(video, true);
+        this.updateOverlayPositions(video);
+        clearInterval(videoInterval);
       });
+    });
+    
+    // Add a listener to handle video playing status
+    video.addEventListener('playing', () => {
+      console.log('Video playing event triggered');
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length > 0 && videoTracks[0].enabled) {
+        this.updateVideoStatus(video, false);
+      }
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length > 0 && audioTracks[0].enabled) {
+        this.updateMicStatus(video, false);
+      }
+      this.updateOverlayPositions(video);
     });
   }
 
@@ -691,11 +992,49 @@ export default class WebRTC {
           micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>'
           micButton.className = 'control-icon mic-off'
           this.updateMicStatus(this.myVideo, true);
+          
+          // Get the player instance from the game state
+          try {
+            const state = store.getState();
+            // Safely access the game object with type assertion
+            const gameScene = (window as any).game?.scene?.keys?.game;
+            
+            if (gameScene && gameScene.myPlayer) {
+              // Update player audio state - this will broadcast to others
+              gameScene.myPlayer.setAudioEnabled(false);
+            } else {
+              // Fallback to direct network update if player instance not available
+              this.network.updatePlayerProps({ audioEnabled: false });
+            }
+          } catch (e) {
+            console.error('Error updating player audio state:', e);
+            // Fallback to direct network update
+            this.network.updatePlayerProps({ audioEnabled: false });
+          }
         } else {
           audioTrack.enabled = true
           micButton.innerHTML = '<i class="fas fa-microphone"></i>'
           micButton.className = 'control-icon mic-on'
           this.updateMicStatus(this.myVideo, false);
+          
+          // Get the player instance from the game state
+          try {
+            const state = store.getState();
+            // Safely access the game object with type assertion
+            const gameScene = (window as any).game?.scene?.keys?.game;
+            
+            if (gameScene && gameScene.myPlayer) {
+              // Update player audio state - this will broadcast to others
+              gameScene.myPlayer.setAudioEnabled(true);
+            } else {
+              // Fallback to direct network update if player instance not available
+              this.network.updatePlayerProps({ audioEnabled: true });
+            }
+          } catch (e) {
+            console.error('Error updating player audio state:', e);
+            // Fallback to direct network update
+            this.network.updatePlayerProps({ audioEnabled: true });
+          }
         }
       }
     })
@@ -721,11 +1060,49 @@ export default class WebRTC {
           videoButton.innerHTML = '<i class="fas fa-video-slash"></i>'
           videoButton.className = 'control-icon video-off'
           this.updateVideoStatus(this.myVideo, true);
+          
+          // Get the player instance from the game state
+          try {
+            const state = store.getState();
+            // Safely access the game object with type assertion
+            const gameScene = (window as any).game?.scene?.keys?.game;
+            
+            if (gameScene && gameScene.myPlayer) {
+              // Update player video state - this will broadcast to others
+              gameScene.myPlayer.setVideoEnabled(false);
+            } else {
+              // Fallback to direct network update if player instance not available
+              this.network.updatePlayerProps({ videoEnabled: false });
+            }
+          } catch (e) {
+            console.error('Error updating player video state:', e);
+            // Fallback to direct network update
+            this.network.updatePlayerProps({ videoEnabled: false });
+          }
         } else {
           videoTrack.enabled = true
           videoButton.innerHTML = '<i class="fas fa-video"></i>'
           videoButton.className = 'control-icon video-on'
           this.updateVideoStatus(this.myVideo, false);
+          
+          // Get the player instance from the game state
+          try {
+            const state = store.getState();
+            // Safely access the game object with type assertion
+            const gameScene = (window as any).game?.scene?.keys?.game;
+            
+            if (gameScene && gameScene.myPlayer) {
+              // Update player video state - this will broadcast to others
+              gameScene.myPlayer.setVideoEnabled(true);
+            } else {
+              // Fallback to direct network update if player instance not available
+              this.network.updatePlayerProps({ videoEnabled: true });
+            }
+          } catch (e) {
+            console.error('Error updating player video state:', e);
+            // Fallback to direct network update
+            this.network.updatePlayerProps({ videoEnabled: true });
+          }
         }
       }
     })
@@ -768,6 +1145,18 @@ export default class WebRTC {
       fontAwesome.rel = 'stylesheet'
       fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css'
       document.head.appendChild(fontAwesome)
+    }
+  }
+
+  // Ensure Font Awesome is loaded
+  private ensureFontAwesomeLoaded() {
+    if (!document.querySelector('link[href*="font-awesome"]')) {
+      const fontAwesome = document.createElement('link');
+      fontAwesome.rel = 'stylesheet';
+      fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
+      document.head.appendChild(fontAwesome);
+      
+      console.log('Added Font Awesome stylesheet to document head');
     }
   }
 }

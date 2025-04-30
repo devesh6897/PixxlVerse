@@ -22,6 +22,8 @@ export default class MyPlayer extends Player {
   private playContainerBody: Phaser.Physics.Arcade.Body
   private chairOnSit?: Chair
   public joystickMovement?: JoystickMovement
+  private network?: Network
+  
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -45,6 +47,36 @@ export default class MyPlayer extends Player {
     this.anims.play(`${this.playerTexture}_idle_down`, true)
     phaserEvents.emit(Event.MY_PLAYER_TEXTURE_CHANGE, this.x, this.y, this.anims.currentAnim.key)
   }
+  
+  // Override setAudioEnabled to broadcast to other players
+  setAudioEnabled(enabled: boolean) {
+    // Call the parent method to update local state
+    super.setAudioEnabled(enabled);
+    
+    // Broadcast the change to other players if network is available
+    if (this.network) {
+      console.log('Broadcasting audio state change:', enabled);
+      this.network.updatePlayerProps({ audioEnabled: enabled });
+      
+      // Also emit a local event for WebRTC to update UI
+      phaserEvents.emit(Event.PLAYER_AUDIO_STATE_CHANGED, this.playerId, enabled);
+    }
+  }
+  
+  // Override setVideoEnabled to broadcast to other players
+  setVideoEnabled(enabled: boolean) {
+    // Call the parent method to update local state
+    super.setVideoEnabled(enabled);
+    
+    // Broadcast the change to other players if network is available
+    if (this.network) {
+      console.log('Broadcasting video state change:', enabled);
+      this.network.updatePlayerProps({ videoEnabled: enabled });
+      
+      // Also emit a local event for WebRTC to update UI
+      phaserEvents.emit(Event.PLAYER_VIDEO_STATE_CHANGED, this.playerId, enabled);
+    }
+  }
 
   handleJoystickMovement(movement: JoystickMovement) {
     this.joystickMovement = movement
@@ -57,6 +89,9 @@ export default class MyPlayer extends Player {
     keyR: Phaser.Input.Keyboard.Key,
     network: Network
   ) {
+    // Store network reference for broadcasting state changes
+    this.network = network;
+    
     if (!cursors) return
 
     const item = playerSelector.selectedItem

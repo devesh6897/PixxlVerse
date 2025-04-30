@@ -7,6 +7,7 @@ import { IRoomData } from '../../types/Rooms'
 import { whiteboardRoomIds } from './schema/OfficeState'
 import PlayerUpdateCommand from './commands/PlayerUpdateCommand'
 import PlayerUpdateNameCommand from './commands/PlayerUpdateNameCommand'
+import PlayerUpdatePropsCommand from './commands/PlayerUpdatePropsCommand'
 import {
   ComputerAddUserCommand,
   ComputerRemoveUserCommand,
@@ -117,6 +118,14 @@ export class SkyOffice extends Room<OfficeState> {
       })
     })
 
+    // when receiving updatePlayerProps message, call the PlayerUpdatePropsCommand
+    this.onMessage(Message.UPDATE_PLAYER_PROPS, (client, message: { [key: string]: any }) => {
+      this.dispatcher.dispatch(new PlayerUpdatePropsCommand(), {
+        client,
+        props: message,
+      })
+    })
+
     // when a player is ready to connect, call the PlayerReadyToConnectCommand
     this.onMessage(Message.READY_TO_CONNECT, (client) => {
       const player = this.state.players.get(client.sessionId)
@@ -157,7 +166,7 @@ export class SkyOffice extends Room<OfficeState> {
 
   async onAuth(client: Client, options: { password: string | null }) {
     if (this.password) {
-      const validPassword = await bcrypt.compare(options.password, this.password)
+      const validPassword = options.password ? await bcrypt.compare(options.password, this.password) : false;
       if (!validPassword) {
         throw new ServerError(403, 'Password is incorrect!')
       }

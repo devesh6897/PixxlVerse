@@ -83,6 +83,22 @@ export default class OtherPlayer extends Player {
           this.videoConnected = value
         }
         break
+        
+      case 'videoEnabled':
+        if (typeof value === 'boolean') {
+          this.setVideoEnabled(value)
+          // Emit event for WebRTC to update UI
+          phaserEvents.emit(Event.PLAYER_VIDEO_STATE_CHANGED, this.playerId, value)
+        }
+        break
+        
+      case 'audioEnabled':
+        if (typeof value === 'boolean') {
+          this.setAudioEnabled(value)
+          // Emit event for WebRTC to update UI
+          phaserEvents.emit(Event.PLAYER_AUDIO_STATE_CHANGED, this.playerId, value)
+        }
+        break
     }
   }
 
