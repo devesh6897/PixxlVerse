@@ -48,14 +48,8 @@ export default class ShareScreenManager {
     // @ts-ignore
     navigator.mediaDevices
       ?.getDisplayMedia({
-        video: {
-          cursor: 'always',
-          displaySurface: 'window',
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        }
+        video: true,
+        audio: true
       })
       .then((stream) => {
         // Detect when user clicks "Stop sharing" outside of our UI.
