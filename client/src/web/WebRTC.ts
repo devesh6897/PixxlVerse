@@ -5,12 +5,13 @@ import { setVideoConnected } from '../stores/UserStore'
 
 export default class WebRTC {
   private myPeer: Peer
-  private peers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
-  private onCalledPeers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
+  private peers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement; name: string }>()
+  private onCalledPeers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement; name: string }>()
   private videoGrid: HTMLElement | null
   private otherVideosContainer: HTMLElement | null
   private controlsContainer: HTMLElement | null
   private myVideo = document.createElement('video')
+  private myName = 'You'
   private myStream?: MediaStream
   private network: Network
 
@@ -123,6 +124,123 @@ export default class WebRTC {
     this.initialize()
   }
 
+  // Add overlays to a video without changing its structure
+  private addOverlaysToVideo(video: HTMLVideoElement, name: string) {
+    const videoContainer = video.parentElement;
+    const videoId = `video-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    video.id = videoId;
+    
+    // Add name overlay
+    const nameOverlay = document.createElement('div');
+    nameOverlay.className = `name-overlay-${videoId}`;
+    nameOverlay.innerText = name;
+    nameOverlay.style.position = 'fixed';
+    nameOverlay.style.top = '5px';
+    nameOverlay.style.left = '5px';
+    nameOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    nameOverlay.style.color = 'white';
+    nameOverlay.style.padding = '2px 8px';
+    nameOverlay.style.borderRadius = '4px';
+    nameOverlay.style.fontSize = '12px';
+    nameOverlay.style.zIndex = '10';
+    document.body.appendChild(nameOverlay);
+    
+    // Add video status overlay (center)
+    const videoStatusOverlay = document.createElement('div');
+    videoStatusOverlay.className = `video-status-overlay-${videoId}`;
+    videoStatusOverlay.innerHTML = '<i class="fas fa-video-slash"></i>';
+    videoStatusOverlay.style.position = 'fixed';
+    videoStatusOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    videoStatusOverlay.style.color = 'white';
+    videoStatusOverlay.style.padding = '8px';
+    videoStatusOverlay.style.borderRadius = '50%';
+    videoStatusOverlay.style.zIndex = '10';
+    videoStatusOverlay.style.display = 'none'; // Initially hidden
+    document.body.appendChild(videoStatusOverlay);
+    
+    // Add mic status overlay (bottom right)
+    const micStatusOverlay = document.createElement('div');
+    micStatusOverlay.className = `mic-status-overlay-${videoId}`;
+    micStatusOverlay.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+    micStatusOverlay.style.position = 'fixed';
+    micStatusOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    micStatusOverlay.style.color = 'white';
+    micStatusOverlay.style.padding = '4px';
+    micStatusOverlay.style.borderRadius = '50%';
+    micStatusOverlay.style.zIndex = '10';
+    micStatusOverlay.style.display = 'none'; // Initially hidden
+    document.body.appendChild(micStatusOverlay);
+    
+    // Update overlay positions when video position changes
+    this.updateOverlayPositions(video);
+    
+    return { nameOverlay, videoStatusOverlay, micStatusOverlay };
+  }
+  
+  // Update overlay positions based on video position
+  private updateOverlayPositions(video: HTMLVideoElement) {
+    const videoId = video.id;
+    const videoRect = video.getBoundingClientRect();
+    
+    // Update name overlay
+    const nameOverlay = document.querySelector(`.name-overlay-${videoId}`) as HTMLElement;
+    if (nameOverlay) {
+      nameOverlay.style.top = `${videoRect.top + 5}px`;
+      nameOverlay.style.left = `${videoRect.left + 5}px`;
+    }
+    
+    // Update video status overlay
+    const videoStatusOverlay = document.querySelector(`.video-status-overlay-${videoId}`) as HTMLElement;
+    if (videoStatusOverlay) {
+      videoStatusOverlay.style.top = `${videoRect.top + (videoRect.height / 2) - 15}px`;
+      videoStatusOverlay.style.left = `${videoRect.left + (videoRect.width / 2) - 15}px`;
+    }
+    
+    // Update mic status overlay
+    const micStatusOverlay = document.querySelector(`.mic-status-overlay-${videoId}`) as HTMLElement;
+    if (micStatusOverlay) {
+      micStatusOverlay.style.top = `${videoRect.bottom - 25}px`;
+      micStatusOverlay.style.left = `${videoRect.right - 25}px`;
+    }
+  }
+  
+  // Remove overlays for a video
+  private removeOverlaysForVideo(video: HTMLVideoElement) {
+    const videoId = video.id;
+    if (!videoId) return;
+    
+    const nameOverlay = document.querySelector(`.name-overlay-${videoId}`);
+    if (nameOverlay) nameOverlay.remove();
+    
+    const videoStatusOverlay = document.querySelector(`.video-status-overlay-${videoId}`);
+    if (videoStatusOverlay) videoStatusOverlay.remove();
+    
+    const micStatusOverlay = document.querySelector(`.mic-status-overlay-${videoId}`);
+    if (micStatusOverlay) micStatusOverlay.remove();
+  }
+  
+  // Update video status
+  public updateVideoStatus(video: HTMLVideoElement, isOff: boolean) {
+    const videoId = video.id;
+    if (!videoId) return;
+    
+    const overlay = document.querySelector(`.video-status-overlay-${videoId}`) as HTMLElement;
+    if (overlay) {
+      overlay.style.display = isOff ? 'block' : 'none';
+    }
+  }
+  
+  // Update mic status
+  public updateMicStatus(video: HTMLVideoElement, isMuted: boolean) {
+    const videoId = video.id;
+    if (!videoId) return;
+    
+    const overlay = document.querySelector(`.mic-status-overlay-${videoId}`) as HTMLElement;
+    if (overlay) {
+      overlay.style.display = isMuted ? 'block' : 'none';
+    }
+  }
+
   // PeerJS throws invalid_id error if it contains some characters such as that colyseus generates.
   // https://peerjs.com/docs.html#peer-id
   private replaceInvalidId(userId: string) {
@@ -134,10 +252,11 @@ export default class WebRTC {
       if (!this.onCalledPeers.has(call.peer)) {
         call.answer(this.myStream)
         const video = document.createElement('video')
-        this.onCalledPeers.set(call.peer, { call, video })
+        const peerName = `Player ${this.onCalledPeers.size + 1}`;
+        this.onCalledPeers.set(call.peer, { call, video, name: peerName })
 
         call.on('stream', (userVideoStream) => {
-          this.addVideoStream(video, userVideoStream, false)
+          this.addVideoStream(video, userVideoStream, false, peerName)
         })
       }
       // on close is triggered manually with deleteOnCalledVideoStream()
@@ -181,7 +300,7 @@ export default class WebRTC {
           console.log("Could not log video track info", e);
         }
         
-        this.addVideoStream(this.myVideo, this.myStream, true)
+        this.addVideoStream(this.myVideo, this.myStream, true, this.myName)
         this.setUpControls()
         store.dispatch(setVideoConnected(true))
         this.network.videoConnected()
@@ -200,10 +319,11 @@ export default class WebRTC {
         console.log('calling', sanitizedId)
         const call = this.myPeer.call(sanitizedId, this.myStream)
         const video = document.createElement('video')
-        this.peers.set(sanitizedId, { call, video })
+        const peerName = `Player ${this.peers.size + 1}`;
+        this.peers.set(sanitizedId, { call, video, name: peerName })
 
         call.on('stream', (userVideoStream) => {
-          this.addVideoStream(video, userVideoStream, false)
+          this.addVideoStream(video, userVideoStream, false, peerName)
         })
 
         // Add error handling and retry logic
@@ -225,18 +345,18 @@ export default class WebRTC {
   }
 
   // method to add new video stream
-  addVideoStream(video: HTMLVideoElement, stream: MediaStream, isMyVideo = false) {
-    video.srcObject = stream
-    video.playsInline = true
-    video.autoplay = true
+  addVideoStream(video: HTMLVideoElement, stream: MediaStream, isMyVideo = false, peerName = 'Player') {
+    video.srcObject = stream;
+    video.playsInline = true;
+    video.autoplay = true;
     
     if (!isMyVideo) {
       // Style other users' videos
-      video.style.width = '220px'
-      video.style.height = '140px'
-      video.style.objectFit = 'cover'
-      video.style.borderRadius = '8px'
-      video.style.background = 'rgba(0,0,0,0.2)'
+      video.style.width = '220px';
+      video.style.height = '140px';
+      video.style.objectFit = 'cover';
+      video.style.borderRadius = '8px';
+      video.style.background = 'rgba(0,0,0,0.2)';
     }
     
     video.addEventListener('loadedmetadata', () => {
@@ -244,7 +364,7 @@ export default class WebRTC {
       video.play().catch(error => {
         console.error('Error playing video:', error);
       });
-    })
+    });
     
     // Add error handling for video element
     video.addEventListener('error', (e) => {
@@ -253,6 +373,36 @@ export default class WebRTC {
     
     // Add videos directly to body first, they'll be moved to the row container during repositioning
     document.body.appendChild(video);
+    
+    // Add overlays
+    const overlays = this.addOverlaysToVideo(video, peerName);
+    
+    // Set up track mute/unmute event listeners to update indicators
+    stream.getAudioTracks().forEach(track => {
+      // Set initial state
+      this.updateMicStatus(video, !track.enabled);
+      
+      // Monitor for changes
+      track.addEventListener('mute', () => {
+        this.updateMicStatus(video, true);
+      });
+      track.addEventListener('unmute', () => {
+        this.updateMicStatus(video, false);
+      });
+    });
+    
+    stream.getVideoTracks().forEach(track => {
+      // Set initial state
+      this.updateVideoStatus(video, !track.enabled);
+      
+      // Monitor for changes
+      track.addEventListener('mute', () => {
+        this.updateVideoStatus(video, true);
+      });
+      track.addEventListener('unmute', () => {
+        this.updateVideoStatus(video, false);
+      });
+    });
     
     // Reposition all videos
     if (!isMyVideo) {
@@ -323,14 +473,10 @@ export default class WebRTC {
       
       if (i < allPeers.length) {
         const [id, { video }] = allPeers[i];
+        
         // Reset peer video styles for flex layout
         video.style.position = 'static';
-        video.style.left = 'auto';
-        video.style.right = 'auto';
-        video.style.top = 'auto';
         video.style.margin = '0';
-        video.style.width = `${peerVideoWidth}px`;
-        video.style.height = '140px';
         
         // Remove from body if it's there
         if (video.parentElement === document.body) {
@@ -342,6 +488,14 @@ export default class WebRTC {
       }
     }
     
+    // Update overlay positions after repositioning
+    setTimeout(() => {
+      this.updateOverlayPositions(this.myVideo);
+      allPeers.forEach(([id, { video }]) => {
+        this.updateOverlayPositions(video);
+      });
+    }, 50);
+    
     console.log(`Video row container width: ${totalWidth}px, starting at: ${startX}px`);
   }
 
@@ -351,6 +505,12 @@ export default class WebRTC {
     if (this.peers.has(sanitizedId)) {
       const peer = this.peers.get(sanitizedId)
       peer?.call.close()
+      
+      // Remove overlays
+      if (peer?.video) {
+        this.removeOverlaysForVideo(peer.video);
+      }
+      
       peer?.video.remove()
       this.peers.delete(sanitizedId)
       
@@ -365,6 +525,12 @@ export default class WebRTC {
     if (this.onCalledPeers.has(sanitizedId)) {
       const onCalledPeer = this.onCalledPeers.get(sanitizedId)
       onCalledPeer?.call.close()
+      
+      // Remove overlays
+      if (onCalledPeer?.video) {
+        this.removeOverlaysForVideo(onCalledPeer.video);
+      }
+      
       onCalledPeer?.video.remove()
       this.onCalledPeers.delete(sanitizedId)
       
@@ -397,10 +563,12 @@ export default class WebRTC {
           audioTrack.enabled = false
           micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>'
           micButton.className = 'control-icon mic-off'
+          this.updateMicStatus(this.myVideo, true);
         } else {
           audioTrack.enabled = true
           micButton.innerHTML = '<i class="fas fa-microphone"></i>'
           micButton.className = 'control-icon mic-on'
+          this.updateMicStatus(this.myVideo, false);
         }
       }
     })
@@ -425,10 +593,12 @@ export default class WebRTC {
           videoTrack.enabled = false
           videoButton.innerHTML = '<i class="fas fa-video-slash"></i>'
           videoButton.className = 'control-icon video-off'
+          this.updateVideoStatus(this.myVideo, true);
         } else {
           videoTrack.enabled = true
           videoButton.innerHTML = '<i class="fas fa-video"></i>'
           videoButton.className = 'control-icon video-on'
+          this.updateVideoStatus(this.myVideo, false);
         }
       }
     })
