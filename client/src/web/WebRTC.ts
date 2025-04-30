@@ -8,7 +8,8 @@ export default class WebRTC {
   private peers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
   private onCalledPeers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
   private videoGrid: HTMLElement | null
-  private buttonGrid: HTMLElement | null
+  private otherVideosContainer: HTMLElement | null
+  private controlsContainer: HTMLElement | null
   private myVideo = document.createElement('video')
   private myStream?: MediaStream
   private network: Network
@@ -16,7 +17,8 @@ export default class WebRTC {
   constructor(userId: string, network: Network) {
     // Initialize DOM elements
     this.videoGrid = document.querySelector('.video-grid')
-    this.buttonGrid = document.querySelector('.button-grid')
+    this.otherVideosContainer = document.querySelector('.other-videos-container')
+    this.controlsContainer = document.querySelector('.video-controls')
     
     // Create video grid if it doesn't exist
     if (!this.videoGrid) {
@@ -24,14 +26,54 @@ export default class WebRTC {
       this.videoGrid = document.createElement('div')
       this.videoGrid.className = 'video-grid'
       document.body.appendChild(this.videoGrid)
+      
+      // Style for main video container
+      this.videoGrid.style.position = 'fixed'
+      this.videoGrid.style.top = '0'
+      this.videoGrid.style.left = '0'
+      this.videoGrid.style.width = '100%'
+      this.videoGrid.style.height = '100%'
+      this.videoGrid.style.zIndex = '1'
     }
     
-    // Create button grid if it doesn't exist
-    if (!this.buttonGrid) {
-      console.log('Button grid not found, creating one')
-      this.buttonGrid = document.createElement('div')
-      this.buttonGrid.className = 'button-grid'
-      document.body.appendChild(this.buttonGrid)
+    // Create other videos container if it doesn't exist
+    if (!this.otherVideosContainer) {
+      console.log('Other videos container not found, creating one')
+      this.otherVideosContainer = document.createElement('div')
+      this.otherVideosContainer.className = 'other-videos-container'
+      document.body.appendChild(this.otherVideosContainer)
+      
+      // Style for other videos container - position for side-by-side layout
+      this.otherVideosContainer.style.display = 'flex'
+      this.otherVideosContainer.style.justifyContent = 'center'
+      this.otherVideosContainer.style.alignItems = 'center'
+      this.otherVideosContainer.style.flexWrap = 'wrap'
+      this.otherVideosContainer.style.position = 'fixed'
+      this.otherVideosContainer.style.top = '20px' // Same height as main video
+      this.otherVideosContainer.style.left = '0'
+      this.otherVideosContainer.style.width = '100%'
+      this.otherVideosContainer.style.zIndex = '1'
+      this.otherVideosContainer.style.pointerEvents = 'none'
+    }
+    
+    // Create controls container if it doesn't exist
+    if (!this.controlsContainer) {
+      console.log('Controls container not found, creating one')
+      this.controlsContainer = document.createElement('div')
+      this.controlsContainer.className = 'video-controls'
+      document.body.appendChild(this.controlsContainer)
+      
+      // Style the controls container to be at the bottom center
+      this.controlsContainer.style.position = 'fixed'
+      this.controlsContainer.style.bottom = '20px'
+      this.controlsContainer.style.left = '50%'
+      this.controlsContainer.style.transform = 'translateX(-50%)'
+      this.controlsContainer.style.display = 'flex'
+      this.controlsContainer.style.gap = '20px'
+      this.controlsContainer.style.backgroundColor = 'rgba(0,0,0,0.5)'
+      this.controlsContainer.style.padding = '10px 20px'
+      this.controlsContainer.style.borderRadius = '30px'
+      this.controlsContainer.style.zIndex = '1000'
     }
     
     const sanitizedId = this.replaceInvalidId(userId)
@@ -63,6 +105,19 @@ export default class WebRTC {
 
     // mute your own video stream (you don't want to hear yourself)
     this.myVideo.muted = true
+    
+    // Style my video to appear in the top center
+    this.myVideo.className = 'my-video'
+    this.myVideo.style.width = '220px'
+    this.myVideo.style.height = '140px'
+    this.myVideo.style.objectFit = 'cover'
+    this.myVideo.style.borderRadius = '8px'
+    this.myVideo.style.position = 'fixed'
+    this.myVideo.style.top = '20px'
+    this.myVideo.style.left = '50%'
+    this.myVideo.style.transform = 'translateX(-50%)'
+    this.myVideo.style.zIndex = '2'
+    this.myVideo.style.background = 'rgba(0,0,0,0.2)'
 
     // config peerJS
     this.initialize()
@@ -82,7 +137,7 @@ export default class WebRTC {
         this.onCalledPeers.set(call.peer, { call, video })
 
         call.on('stream', (userVideoStream) => {
-          this.addVideoStream(video, userVideoStream)
+          this.addVideoStream(video, userVideoStream, false)
         })
       }
       // on close is triggered manually with deleteOnCalledVideoStream()
@@ -126,8 +181,8 @@ export default class WebRTC {
           console.log("Could not log video track info", e);
         }
         
-        this.addVideoStream(this.myVideo, this.myStream)
-        this.setUpButtons()
+        this.addVideoStream(this.myVideo, this.myStream, true)
+        this.setUpControls()
         store.dispatch(setVideoConnected(true))
         this.network.videoConnected()
       })
@@ -148,7 +203,7 @@ export default class WebRTC {
         this.peers.set(sanitizedId, { call, video })
 
         call.on('stream', (userVideoStream) => {
-          this.addVideoStream(video, userVideoStream)
+          this.addVideoStream(video, userVideoStream, false)
         })
 
         // Add error handling and retry logic
@@ -169,11 +224,23 @@ export default class WebRTC {
     }
   }
 
-  // method to add new video stream to videoGrid div
-  addVideoStream(video: HTMLVideoElement, stream: MediaStream) {
+  // method to add new video stream
+  addVideoStream(video: HTMLVideoElement, stream: MediaStream, isMyVideo = false) {
     video.srcObject = stream
     video.playsInline = true
+    video.autoplay = true
+    
+    if (!isMyVideo) {
+      // Style other users' videos
+      video.style.width = '220px'
+      video.style.height = '140px'
+      video.style.objectFit = 'cover'
+      video.style.borderRadius = '8px'
+      video.style.background = 'rgba(0,0,0,0.2)'
+    }
+    
     video.addEventListener('loadedmetadata', () => {
+      console.log('Video metadata loaded, attempting to play...');
       video.play().catch(error => {
         console.error('Error playing video:', error);
       });
@@ -184,7 +251,98 @@ export default class WebRTC {
       console.error('Video element error:', e);
     });
     
-    if (this.videoGrid) this.videoGrid.append(video)
+    // Add videos directly to body first, they'll be moved to the row container during repositioning
+    document.body.appendChild(video);
+    
+    // Reposition all videos
+    if (!isMyVideo) {
+      this.repositionPeerVideos();
+    }
+  }
+
+  // Reposition peer videos to left and right sides
+  private repositionPeerVideos() {
+    console.log('Repositioning peer videos');
+    
+    // Get all peers from both maps
+    const allPeers = [...this.peers.entries(), ...this.onCalledPeers.entries()];
+    
+    // Get window width to calculate positions
+    const windowWidth = window.innerWidth;
+    const myVideoWidth = 220; // Width of your video
+    const peerVideoWidth = 220; // Width of peer videos
+    const gap = 10; // Gap between videos
+    
+    // Calculate total width needed for all videos (including your video)
+    const totalVideos = allPeers.length + 1; // +1 for your video
+    const totalWidth = (totalVideos * peerVideoWidth) + ((totalVideos - 1) * gap);
+    const startX = (windowWidth - totalWidth) / 2;
+    
+    // Create a container for all videos if it doesn't exist
+    if (!document.querySelector('.video-row-container')) {
+      const videoRowContainer = document.createElement('div');
+      videoRowContainer.className = 'video-row-container';
+      videoRowContainer.style.position = 'fixed';
+      videoRowContainer.style.top = '20px';
+      videoRowContainer.style.left = '0';
+      videoRowContainer.style.width = '100%';
+      videoRowContainer.style.display = 'flex';
+      videoRowContainer.style.justifyContent = 'center';
+      videoRowContainer.style.alignItems = 'center';
+      videoRowContainer.style.gap = `${gap}px`;
+      videoRowContainer.style.zIndex = '2';
+      document.body.appendChild(videoRowContainer);
+    }
+    
+    const videoRowContainer = document.querySelector('.video-row-container') as HTMLElement;
+    
+    // Clear the container
+    while (videoRowContainer.firstChild) {
+      videoRowContainer.removeChild(videoRowContainer.firstChild);
+    }
+    
+    // Reposition your video
+    this.myVideo.style.position = 'static'; // Reset position for flex layout
+    this.myVideo.style.transform = 'none'; // Remove transform
+    this.myVideo.style.margin = '0'; // Remove margin
+    
+    // Remove your video from body if it's there
+    if (this.myVideo.parentElement === document.body) {
+      document.body.removeChild(this.myVideo);
+    }
+    
+    // Determine where to insert your video (in the middle)
+    const middleIndex = Math.floor(allPeers.length / 2);
+    
+    // Add all videos to the container in the correct order
+    for (let i = 0; i <= allPeers.length; i++) {
+      if (i === middleIndex) {
+        // Add your video in the middle
+        videoRowContainer.appendChild(this.myVideo);
+      }
+      
+      if (i < allPeers.length) {
+        const [id, { video }] = allPeers[i];
+        // Reset peer video styles for flex layout
+        video.style.position = 'static';
+        video.style.left = 'auto';
+        video.style.right = 'auto';
+        video.style.top = 'auto';
+        video.style.margin = '0';
+        video.style.width = `${peerVideoWidth}px`;
+        video.style.height = '140px';
+        
+        // Remove from body if it's there
+        if (video.parentElement === document.body) {
+          document.body.removeChild(video);
+        }
+        
+        // Add to container
+        videoRowContainer.appendChild(video);
+      }
+    }
+    
+    console.log(`Video row container width: ${totalWidth}px, starting at: ${startX}px`);
   }
 
   // method to remove video stream (when we are the host of the call)
@@ -195,6 +353,9 @@ export default class WebRTC {
       peer?.call.close()
       peer?.video.remove()
       this.peers.delete(sanitizedId)
+      
+      // Reposition remaining videos
+      this.repositionPeerVideos()
     }
   }
 
@@ -206,40 +367,110 @@ export default class WebRTC {
       onCalledPeer?.call.close()
       onCalledPeer?.video.remove()
       this.onCalledPeers.delete(sanitizedId)
+      
+      // Reposition remaining videos
+      this.repositionPeerVideos()
     }
   }
 
-  // method to set up mute/unmute and video on/off buttons
-  setUpButtons() {
-    const audioButton = document.createElement('button')
-    audioButton.innerText = 'Mute'
-    audioButton.addEventListener('click', () => {
+  // method to set up controls with icons
+  setUpControls() {
+    if (!this.controlsContainer) return;
+    
+    // Create mic control
+    const micButton = document.createElement('div')
+    micButton.className = 'control-icon mic-on'
+    micButton.innerHTML = '<i class="fas fa-microphone"></i>'  // Using Font Awesome
+    micButton.style.cursor = 'pointer'
+    micButton.style.color = 'white'
+    micButton.style.fontSize = '24px'
+    micButton.style.width = '40px'
+    micButton.style.height = '40px'
+    micButton.style.display = 'flex'
+    micButton.style.alignItems = 'center'
+    micButton.style.justifyContent = 'center'
+    
+    micButton.addEventListener('click', () => {
       if (this.myStream) {
         const audioTrack = this.myStream.getAudioTracks()[0]
         if (audioTrack.enabled) {
           audioTrack.enabled = false
-          audioButton.innerText = 'Unmute'
+          micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>'
+          micButton.className = 'control-icon mic-off'
         } else {
           audioTrack.enabled = true
-          audioButton.innerText = 'Mute'
+          micButton.innerHTML = '<i class="fas fa-microphone"></i>'
+          micButton.className = 'control-icon mic-on'
         }
       }
     })
-    const videoButton = document.createElement('button')
-    videoButton.innerText = 'Video off'
+    
+    // Create video control
+    const videoButton = document.createElement('div')
+    videoButton.className = 'control-icon video-on'
+    videoButton.innerHTML = '<i class="fas fa-video"></i>'  // Using Font Awesome
+    videoButton.style.cursor = 'pointer'
+    videoButton.style.color = 'white'
+    videoButton.style.fontSize = '24px'
+    videoButton.style.width = '40px'
+    videoButton.style.height = '40px'
+    videoButton.style.display = 'flex'
+    videoButton.style.alignItems = 'center'
+    videoButton.style.justifyContent = 'center'
+    
     videoButton.addEventListener('click', () => {
       if (this.myStream) {
-        const audioTrack = this.myStream.getVideoTracks()[0]
-        if (audioTrack.enabled) {
-          audioTrack.enabled = false
-          videoButton.innerText = 'Video on'
+        const videoTrack = this.myStream.getVideoTracks()[0]
+        if (videoTrack.enabled) {
+          videoTrack.enabled = false
+          videoButton.innerHTML = '<i class="fas fa-video-slash"></i>'
+          videoButton.className = 'control-icon video-off'
         } else {
-          audioTrack.enabled = true
-          videoButton.innerText = 'Video off'
+          videoTrack.enabled = true
+          videoButton.innerHTML = '<i class="fas fa-video"></i>'
+          videoButton.className = 'control-icon video-on'
         }
       }
     })
-    this.buttonGrid?.append(audioButton)
-    this.buttonGrid?.append(videoButton)
+    
+    // Create cut/reload button
+    const cutButton = document.createElement('div')
+    cutButton.className = 'control-icon cut-call'
+    cutButton.innerHTML = '<i class="fas fa-phone-slash"></i>'  // Using Font Awesome
+    cutButton.style.cursor = 'pointer'
+    cutButton.style.color = 'red'
+    cutButton.style.fontSize = '24px'
+    cutButton.style.width = '40px'
+    cutButton.style.height = '40px'
+    cutButton.style.display = 'flex'
+    cutButton.style.alignItems = 'center'
+    cutButton.style.justifyContent = 'center'
+    
+    cutButton.addEventListener('click', () => {
+      // Close all connections before reloading
+      this.peers.forEach(({ call }) => call.close());
+      this.onCalledPeers.forEach(({ call }) => call.close());
+      
+      // Stop all tracks
+      if (this.myStream) {
+        this.myStream.getTracks().forEach(track => track.stop());
+      }
+      
+      // Reload the page
+      window.location.reload();
+    })
+    
+    // Add controls to container
+    this.controlsContainer.appendChild(micButton)
+    this.controlsContainer.appendChild(videoButton)
+    this.controlsContainer.appendChild(cutButton)
+    
+    // Add Font Awesome if not already included
+    if (!document.querySelector('link[href*="font-awesome"]')) {
+      const fontAwesome = document.createElement('link')
+      fontAwesome.rel = 'stylesheet'
+      fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css'
+      document.head.appendChild(fontAwesome)
+    }
   }
 }
