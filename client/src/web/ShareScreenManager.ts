@@ -56,6 +56,8 @@ export default class ShareScreenManager {
         // https://stackoverflow.com/a/25179198
         const track = stream.getVideoTracks()[0]
         if (track) {
+          console.log('Screen sharing started successfully');
+          
           // Try to improve video quality if possible
           try {
             const capabilities = track.getCapabilities();
@@ -69,6 +71,8 @@ export default class ShareScreenManager {
           track.onended = () => {
             this.stopScreenShare()
           }
+        } else {
+          console.error('No video track found in the screen sharing stream');
         }
 
         this.myStream = stream
@@ -83,6 +87,10 @@ export default class ShareScreenManager {
           }
         }
       })
+      .catch((error) => {
+        console.error('Error starting screen share:', error);
+        alert('Could not start screen sharing. Please make sure you have permissions enabled.');
+      });
   }
 
   // TODO(daxchen): Fix this trash hack, if we call store.dispatch here when calling

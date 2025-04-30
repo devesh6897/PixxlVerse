@@ -7,13 +7,33 @@ export default class WebRTC {
   private myPeer: Peer
   private peers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
   private onCalledPeers = new Map<string, { call: Peer.MediaConnection; video: HTMLVideoElement }>()
-  private videoGrid = document.querySelector('.video-grid')
-  private buttonGrid = document.querySelector('.button-grid')
+  private videoGrid: HTMLElement | null
+  private buttonGrid: HTMLElement | null
   private myVideo = document.createElement('video')
   private myStream?: MediaStream
   private network: Network
 
   constructor(userId: string, network: Network) {
+    // Initialize DOM elements
+    this.videoGrid = document.querySelector('.video-grid')
+    this.buttonGrid = document.querySelector('.button-grid')
+    
+    // Create video grid if it doesn't exist
+    if (!this.videoGrid) {
+      console.log('Video grid not found, creating one')
+      this.videoGrid = document.createElement('div')
+      this.videoGrid.className = 'video-grid'
+      document.body.appendChild(this.videoGrid)
+    }
+    
+    // Create button grid if it doesn't exist
+    if (!this.buttonGrid) {
+      console.log('Button grid not found, creating one')
+      this.buttonGrid = document.createElement('div')
+      this.buttonGrid.className = 'button-grid'
+      document.body.appendChild(this.buttonGrid)
+    }
+    
     const sanitizedId = this.replaceInvalidId(userId)
     this.myPeer = new Peer(sanitizedId, {
       debug: 3,
@@ -78,6 +98,13 @@ export default class WebRTC {
   }
 
   getUserMedia(alertOnError = true) {
+    // Check if getUserMedia is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('getUserMedia is not supported in this browser');
+      if (alertOnError) window.alert('Video calls are not supported in this browser. Please try a different browser like Chrome or Firefox.');
+      return;
+    }
+    
     // ask the browser to get user media
     navigator.mediaDevices
       ?.getUserMedia({
@@ -85,6 +112,7 @@ export default class WebRTC {
         audio: true
       })
       .then((stream) => {
+        console.log('Successfully got media stream');
         this.myStream = stream
         
         // Try to improve video quality after getting the stream
@@ -123,6 +151,19 @@ export default class WebRTC {
           this.addVideoStream(video, userVideoStream)
         })
 
+        // Add error handling and retry logic
+        call.on('error', (err) => {
+          console.error('Call error with peer:', sanitizedId, err);
+          // Try to reconnect after a delay
+          setTimeout(() => {
+            if (this.peers.has(sanitizedId)) {
+              console.log('Attempting to reconnect call to', sanitizedId);
+              this.deleteVideoStream(sanitizedId);
+              this.connectToNewUser(userId);
+            }
+          }, 5000);
+        });
+
         // on close is triggered manually with deleteVideoStream()
       }
     }
@@ -133,8 +174,16 @@ export default class WebRTC {
     video.srcObject = stream
     video.playsInline = true
     video.addEventListener('loadedmetadata', () => {
-      video.play()
+      video.play().catch(error => {
+        console.error('Error playing video:', error);
+      });
     })
+    
+    // Add error handling for video element
+    video.addEventListener('error', (e) => {
+      console.error('Video element error:', e);
+    });
+    
     if (this.videoGrid) this.videoGrid.append(video)
   }
 
