@@ -45,11 +45,18 @@ export default class ShareScreenManager {
   }
 
   startScreenShare() {
-    // @ts-ignore
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      alert('Screen sharing is not supported in your browser. Please use a modern browser like Chrome, Firefox, or Edge.');
+      return;
+    }
+    
     navigator.mediaDevices
-      ?.getDisplayMedia({
+      .getDisplayMedia({
         video: true,
-        audio: true
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        }
       })
       .then((stream) => {
         // Detect when user clicks "Stop sharing" outside of our UI.
@@ -63,6 +70,15 @@ export default class ShareScreenManager {
             const capabilities = track.getCapabilities();
             if (capabilities) {
               console.log("Screen share capabilities:", capabilities);
+              
+              // Try to set higher resolution if supported
+              if (track.applyConstraints) {
+                track.applyConstraints({
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                  frameRate: { ideal: 30 }
+                }).catch(e => console.log("Could not apply constraints:", e));
+              }
             }
           } catch (e) {
             console.log("Could not get screen share capabilities", e);
@@ -73,6 +89,9 @@ export default class ShareScreenManager {
           }
         } else {
           console.error('No video track found in the screen sharing stream');
+          alert('Failed to start screen sharing: No video track available');
+          this.stopScreenShare(true);
+          return;
         }
 
         this.myStream = stream
@@ -89,7 +108,20 @@ export default class ShareScreenManager {
       })
       .catch((error) => {
         console.error('Error starting screen share:', error);
-        alert('Could not start screen sharing. Please make sure you have permissions enabled.');
+        
+        let errorMessage = 'Could not start screen sharing. ';
+        
+        if (error.name === 'NotAllowedError') {
+          errorMessage += 'You denied permission to share your screen.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage += 'No screen available to share.';
+        } else if (error.name === 'NotReadableError') {
+          errorMessage += 'Your screen is already being captured by another application.';
+        } else {
+          errorMessage += 'Please make sure you have permissions enabled.';
+        }
+        
+        alert(errorMessage);
       });
   }
 
@@ -97,8 +129,17 @@ export default class ShareScreenManager {
   // from onClose, it causes redux reducer cycle, this may be fixable by using thunk
   // or something.
   stopScreenShare(shouldDispatch = true) {
-    this.myStream?.getTracks().forEach((track) => track.stop())
-    this.myStream = undefined
+    if (this.myStream) {
+      this.myStream.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {
+          console.error("Error stopping track:", e);
+        }
+      });
+      this.myStream = undefined;
+    }
+    
     if (shouldDispatch) {
       store.dispatch(setMyStream(null))
       // Manually let all other existing users know screen sharing is stopped
@@ -111,7 +152,16 @@ export default class ShareScreenManager {
     if (!this.myStream || userId === this.userId) return
 
     const sanatizedId = this.makeId(userId)
-    this.myPeer.call(sanatizedId, this.myStream)
+    try {
+      const call = this.myPeer.call(sanatizedId, this.myStream);
+      
+      // Add error handler for call
+      call.on('error', (err) => {
+        console.error(`Error in peer call to ${sanatizedId}:`, err);
+      });
+    } catch (error) {
+      console.error(`Failed to establish call with ${sanatizedId}:`, error);
+    }
   }
 
   onUserLeft(userId: string) {
