@@ -33,7 +33,7 @@ export class ChatMessage extends Schema implements IChatMessage {
   @type('string') content = ''
 }
 
-export class OfficeState extends Schema implements currentstate {
+export class roomstate extends Schema implements currentstate {
   @type({ map: Player })
   players = new MapSchema<Player>()
 
