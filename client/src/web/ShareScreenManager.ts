@@ -59,8 +59,7 @@ export default class ShareScreenManager {
         }
       })
       .then((stream) => {
-        // Detect when user clicks "Stop sharing" outside of our UI.
-        // https://stackoverflow.com/a/25179198
+
         const track = stream.getVideoTracks()[0]
         if (track) {
           console.log('Screen sharing started successfully');
@@ -125,9 +124,7 @@ export default class ShareScreenManager {
       });
   }
 
-  // TODO(daxchen): Fix this trash hack, if we call store.dispatch here when calling
-  // from onClose, it causes redux reducer cycle, this may be fixable by using thunk
-  // or something.
+
   stopScreenShare(shouldDispatch = true) {
     if (this.myStream) {
       this.myStream.getTracks().forEach((track) => {

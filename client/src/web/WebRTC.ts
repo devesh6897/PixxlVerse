@@ -325,8 +325,7 @@ export default class WebRTC {
     console.log(`Setting mic status for ${video.id} to ${isMuted ? 'muted' : 'unmuted'}`);
   }
 
-  // PeerJS throws invalid_id error if it contains some characters such as that colyseus generates.
-  // https://peerjs.com/docs.html#peer-id
+
   private replaceInvalidId(userId: string) {
     return userId.replace(/[^0-9a-z]/gi, 'G')
   }

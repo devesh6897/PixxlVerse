@@ -1,7 +1,7 @@
 {
-  "name": "skyoffice",
+  "name": "PixelVerse",
   "private": true,
-  "description": "Client for SkyOffice",
+  "description": "Client for PixelVerse",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
