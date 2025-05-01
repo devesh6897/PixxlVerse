@@ -86,9 +86,15 @@ const GameCard = styled.div`
   align-items: center;
   cursor: pointer;
   transition: transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     transform: scale(1.05);
+    
+    .game-name-overlay {
+      opacity: 1;
+    }
   }
 
   img {
@@ -96,13 +102,36 @@ const GameCard = styled.div`
     height: 120px;
     object-fit: cover;
     border-radius: 4px;
-    margin-bottom: 10px;
   }
-
-  h3 {
-    margin: 0;
-    font-size: 18px;
-    text-align: center;
+  
+  .game-name-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    background-color: rgba(0, 0, 0, 0.65);
+    border-radius: 4px;
+    
+    @supports ((-webkit-backdrop-filter: blur(5px)) or (backdrop-filter: blur(5px))) {
+      background-color: rgba(0, 0, 0, 0.4);
+      -webkit-backdrop-filter: blur(5px);
+      backdrop-filter: blur(5px);
+    }
+    
+    h3 {
+      margin: 0;
+      font-size: 22px;
+      text-align: center;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      padding: 10px;
+    }
   }
 `
 
@@ -203,7 +232,9 @@ export default function GameWindow() {
                     onClick={() => handleGameSelect(game.id)}
                   >
                     <img src={game.image} alt={game.name} />
-                    <h3>{game.name}</h3>
+                    <div className="game-name-overlay">
+                      <h3>{game.name}</h3>
+                    </div>
                   </GameCard>
                 ))}
               </GameSelectionWrapper>

@@ -15,6 +15,8 @@ export default class WebRTC {
   private myName = 'You'
   private myStream?: MediaStream
   private network: Network
+  private isVideoContainerVisible = true;
+  private currentLayout: 'row' | 'column' = 'row';
 
   constructor(userId: string, network: Network) {
     // Initialize DOM elements
@@ -129,6 +131,26 @@ export default class WebRTC {
 
     // config peerJS
     this.initialize()
+
+    // Add keyboard shortcut for toggling video visibility
+    document.addEventListener('keydown', (e) => {
+      // Alt+V to toggle video visibility
+      if (e.altKey && e.key.toLowerCase() === 'v') {
+        this.toggleVideoContainerVisibility();
+        
+        // Update the toggle button icon
+        const toggleVisibilityButton = document.querySelector('.visibility-toggle') as HTMLElement;
+        if (toggleVisibilityButton) {
+          toggleVisibilityButton.innerHTML = this.isVideoContainerVisible 
+            ? '<i class="fas fa-eye-slash"></i>' 
+            : '<i class="fas fa-eye"></i>';
+          
+          toggleVisibilityButton.title = this.isVideoContainerVisible 
+            ? 'Hide videos (Alt+V)' 
+            : 'Show videos (Alt+V)';
+        }
+      }
+    });
   }
 
   // Setup listeners for player state changes
@@ -186,28 +208,34 @@ export default class WebRTC {
   private setupLayoutChangeListeners() {
     // Listen for screen sharing
     phaserEvents.on(Event.SCREEN_SHARING_STARTED, () => {
+      this.currentLayout = 'column';
       this.repositionPeerVideos('column');
     });
     
     phaserEvents.on(Event.SCREEN_SHARING_STOPPED, () => {
+      this.currentLayout = 'row';
       this.repositionPeerVideos('row');
     });
     
     // Listen for whiteboard activation
     phaserEvents.on(Event.WHITEBOARD_ACTIVATED, () => {
+      this.currentLayout = 'column';
       this.repositionPeerVideos('column');
     });
     
     phaserEvents.on(Event.WHITEBOARD_DEACTIVATED, () => {
+      this.currentLayout = 'row';
       this.repositionPeerVideos('row');
     });
     
     // Listen for game activation
     phaserEvents.on(Event.GAME_STARTED, () => {
+      this.currentLayout = 'column';
       this.repositionPeerVideos('column');
     });
     
     phaserEvents.on(Event.GAME_STOPPED, () => {
+      this.currentLayout = 'row';
       this.repositionPeerVideos('row');
     });
     
@@ -218,7 +246,8 @@ export default class WebRTC {
       if (videoContainer) {
         // Check if we're in column mode by testing the flexDirection property
         const isColumnMode = videoContainer.style.flexDirection === 'column';
-        this.repositionPeerVideos(isColumnMode ? 'column' : 'row');
+        this.currentLayout = isColumnMode ? 'column' : 'row';
+        this.repositionPeerVideos(this.currentLayout);
       }
     });
     
@@ -247,39 +276,13 @@ export default class WebRTC {
     nameOverlay.style.zIndex = '100';
     document.body.appendChild(nameOverlay);
     
-    // Add video status overlay (center)
-    const videoStatusOverlay = document.createElement('div');
-    videoStatusOverlay.className = `video-status-overlay-${videoId}`;
-    videoStatusOverlay.innerHTML = '<i class="fas fa-video-slash"></i>';
-    videoStatusOverlay.style.position = 'fixed';
-    videoStatusOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
-    videoStatusOverlay.style.color = 'white';
-    videoStatusOverlay.style.padding = '8px';
-    videoStatusOverlay.style.borderRadius = '50%';
-    videoStatusOverlay.style.zIndex = '100';
-    videoStatusOverlay.style.display = 'none'; // Initially hidden
-    document.body.appendChild(videoStatusOverlay);
-    
-    // Add mic status overlay (bottom right)
-    const micStatusOverlay = document.createElement('div');
-    micStatusOverlay.className = `mic-status-overlay-${videoId}`;
-    micStatusOverlay.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-    micStatusOverlay.style.position = 'fixed';
-    micStatusOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
-    micStatusOverlay.style.color = 'white';
-    micStatusOverlay.style.padding = '4px';
-    micStatusOverlay.style.borderRadius = '50%';
-    micStatusOverlay.style.zIndex = '100';
-    micStatusOverlay.style.display = 'none'; // Initially hidden
-    document.body.appendChild(micStatusOverlay);
-    
     // Ensure Font Awesome is loaded
     this.ensureFontAwesomeLoaded();
     
     // Update overlay positions when video position changes
     this.updateOverlayPositions(video);
     
-    return { nameOverlay, videoStatusOverlay, micStatusOverlay };
+    return { nameOverlay };
   }
   
   // Update overlay positions based on video position
@@ -297,32 +300,6 @@ export default class WebRTC {
       nameOverlay.style.left = `${videoRect.left + 5}px`;
       nameOverlay.style.zIndex = '10';
     }
-    
-    // Update video status overlay
-    const videoStatusOverlay = document.querySelector(`.video-status-overlay-${videoId}`) as HTMLElement;
-    if (videoStatusOverlay) {
-      videoStatusOverlay.style.top = `${videoRect.top + (videoRect.height / 2) - 15}px`;
-      videoStatusOverlay.style.left = `${videoRect.left + (videoRect.width / 2) - 15}px`;
-      videoStatusOverlay.style.zIndex = '10';
-      
-      // Make sure it's visible if display is set to block
-      if (videoStatusOverlay.style.display === 'block') {
-        videoStatusOverlay.style.visibility = 'visible';
-      }
-    }
-    
-    // Update mic status overlay
-    const micStatusOverlay = document.querySelector(`.mic-status-overlay-${videoId}`) as HTMLElement;
-    if (micStatusOverlay) {
-      micStatusOverlay.style.top = `${videoRect.bottom - 25}px`;
-      micStatusOverlay.style.left = `${videoRect.right - 25}px`;
-      micStatusOverlay.style.zIndex = '10';
-      
-      // Make sure it's visible if display is set to block
-      if (micStatusOverlay.style.display === 'block') {
-        micStatusOverlay.style.visibility = 'visible';
-      }
-    }
   }
   
   // Remove overlays for a video
@@ -332,62 +309,20 @@ export default class WebRTC {
     
     const nameOverlay = document.querySelector(`.name-overlay-${videoId}`);
     if (nameOverlay) nameOverlay.remove();
-    
-    const videoStatusOverlay = document.querySelector(`.video-status-overlay-${videoId}`);
-    if (videoStatusOverlay) videoStatusOverlay.remove();
-    
-    const micStatusOverlay = document.querySelector(`.mic-status-overlay-${videoId}`);
-    if (micStatusOverlay) micStatusOverlay.remove();
   }
   
   // Update video status
   public updateVideoStatus(video: HTMLVideoElement, isOff: boolean) {
-    const videoId = video.id;
-    if (!videoId) return;
-    
-    const overlay = document.querySelector(`.video-status-overlay-${videoId}`) as HTMLElement;
-    if (overlay) {
-      console.log(`Setting video status for ${videoId} to ${isOff ? 'off' : 'on'}`);
-      
-      // Just use the value passed in - trust the player state
-      overlay.style.display = isOff ? 'block' : 'none';
-      
-      // Make sure it's correctly positioned in the center of the video
-      if (isOff) {
-        const videoRect = video.getBoundingClientRect();
-        overlay.style.top = `${videoRect.top + (videoRect.height / 2) - 15}px`;
-        overlay.style.left = `${videoRect.left + (videoRect.width / 2) - 15}px`;
-        overlay.style.visibility = 'visible';
-        overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
-        overlay.style.padding = '8px';
-        overlay.style.zIndex = '100';
-      }
-    }
+    // The overlay icons have been removed, but we keep this method
+    // to maintain compatibility with existing code
+    console.log(`Setting video status for ${video.id} to ${isOff ? 'off' : 'on'}`);
   }
   
   // Update mic status
   public updateMicStatus(video: HTMLVideoElement, isMuted: boolean) {
-    const videoId = video.id;
-    if (!videoId) return;
-    
-    const overlay = document.querySelector(`.mic-status-overlay-${videoId}`) as HTMLElement;
-    if (overlay) {
-      console.log(`Setting mic status for ${videoId} to ${isMuted ? 'muted' : 'unmuted'}`);
-      
-      // Just use the value passed in - trust the player state
-      overlay.style.display = isMuted ? 'block' : 'none';
-      
-      // Make sure it's correctly positioned in the bottom right of the video
-      if (isMuted) {
-        const videoRect = video.getBoundingClientRect();
-        overlay.style.top = `${videoRect.bottom - 25}px`;
-        overlay.style.left = `${videoRect.right - 25}px`;
-        overlay.style.visibility = 'visible';
-        overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
-        overlay.style.padding = '4px';
-        overlay.style.zIndex = '100';
-      }
-    }
+    // The overlay icons have been removed, but we keep this method
+    // to maintain compatibility with existing code
+    console.log(`Setting mic status for ${video.id} to ${isMuted ? 'muted' : 'unmuted'}`);
   }
 
   // PeerJS throws invalid_id error if it contains some characters such as that colyseus generates.
@@ -454,18 +389,13 @@ export default class WebRTC {
     // For audio tracks
     stream.getAudioTracks().forEach(track => {
       // Define a function to check if audio is actually muted
-      // This is more reliable than just checking track.enabled
       const checkAudioState = () => {
         // If track is explicitly disabled, it's definitely muted
         if (!track.enabled) return true;
-        
-        // Additional checks for audio activity could be added here
-        // For now, trust the track.enabled state, but this could be enhanced
         return false;
       };
       
-      // Set initial state - initially don't show muted
-      this.updateMicStatus(video, false);
+      // Set initial state in log only
       console.log('Initial audio track state set to unmuted for new connection');
       
       // Create a periodic check for track state
@@ -478,20 +408,17 @@ export default class WebRTC {
         
         const isMuted = checkAudioState();
         this.updateMicStatus(video, isMuted);
-        this.updateOverlayPositions(video);
       }, 500);
       
       // Standard events
       track.addEventListener('mute', () => {
         console.log('Audio track muted event triggered');
         this.updateMicStatus(video, true);
-        this.updateOverlayPositions(video);
       });
       
       track.addEventListener('unmute', () => {
         console.log('Audio track unmuted event triggered');
         this.updateMicStatus(video, false);
-        this.updateOverlayPositions(video);
       });
       
       // Listen for track enabled/disabled changes
@@ -511,7 +438,6 @@ export default class WebRTC {
             setTimeout(() => {
               const isMuted = !value;
               self.updateMicStatus(video, isMuted);
-              self.updateOverlayPositions(video);
             }, 0);
           }
         });
@@ -520,7 +446,6 @@ export default class WebRTC {
       track.addEventListener('ended', () => {
         console.log('Audio track ended event triggered');
         this.updateMicStatus(video, true);
-        this.updateOverlayPositions(video);
         clearInterval(audioInterval);
       });
     });
@@ -531,20 +456,10 @@ export default class WebRTC {
       const checkVideoState = () => {
         // If track is explicitly disabled, it's definitely off
         if (!track.enabled) return true;
-        
-        // Check if there's actual video data
-        // This can help detect black frames or other issues
-        try {
-          // We can't directly check pixel data here, so rely on track.enabled
-          return false;
-        } catch (e) {
-          console.error('Error checking video data:', e);
-          return false;
-        }
+        return false;
       };
       
-      // Set initial state - initially don't show video off
-      this.updateVideoStatus(video, false);
+      // Set initial state in log only
       console.log('Initial video track state set to enabled for new connection');
       
       // Create a periodic check for track state
@@ -557,20 +472,17 @@ export default class WebRTC {
         
         const isOff = checkVideoState();
         this.updateVideoStatus(video, isOff);
-        this.updateOverlayPositions(video);
       }, 500);
       
       // Standard events
       track.addEventListener('mute', () => {
         console.log('Video track muted event triggered');
         this.updateVideoStatus(video, true);
-        this.updateOverlayPositions(video);
       });
       
       track.addEventListener('unmute', () => {
         console.log('Video track unmuted event triggered');
         this.updateVideoStatus(video, false);
-        this.updateOverlayPositions(video);
       });
       
       // Listen for track enabled/disabled changes
@@ -590,7 +502,6 @@ export default class WebRTC {
             setTimeout(() => {
               const isOff = !value;
               self.updateVideoStatus(video, isOff);
-              self.updateOverlayPositions(video);
             }, 0);
           }
         });
@@ -599,7 +510,6 @@ export default class WebRTC {
       track.addEventListener('ended', () => {
         console.log('Video track ended event triggered');
         this.updateVideoStatus(video, true);
-        this.updateOverlayPositions(video);
         clearInterval(videoInterval);
       });
     });
@@ -615,7 +525,6 @@ export default class WebRTC {
       if (audioTracks.length > 0 && audioTracks[0].enabled) {
         this.updateMicStatus(video, false);
       }
-      this.updateOverlayPositions(video);
     });
   }
 
@@ -749,14 +658,19 @@ export default class WebRTC {
     // Add videos directly to body first, they'll be moved to the row container during repositioning
     document.body.appendChild(video);
     
-    // Add overlays
+    // Add name overlay
     const overlays = this.addOverlaysToVideo(video, peerName);
     
-    // Set up track mute/unmute event listeners to update indicators (for your own video)
+    // If videos are hidden, hide the name overlay immediately
+    if (!this.isVideoContainerVisible && overlays.nameOverlay) {
+      overlays.nameOverlay.style.display = 'none';
+    }
+    
+    // Set up track mute/unmute event listeners to keep track of state (for your own video)
     if (isMyVideo) {
       stream.getAudioTracks().forEach(track => {
-        // Set initial state
-        this.updateMicStatus(video, !track.enabled);
+        // Track initial state
+        console.log(`Initial audio track state: ${track.enabled ? 'enabled' : 'disabled'}`);
         
         // Monitor for changes
         track.addEventListener('mute', () => {
@@ -766,15 +680,15 @@ export default class WebRTC {
           this.updateMicStatus(video, false);
         });
         
-        // Initial display
+        // Initial state logging
         if (!track.enabled) {
           this.updateMicStatus(video, true);
         }
       });
       
       stream.getVideoTracks().forEach(track => {
-        // Set initial state
-        this.updateVideoStatus(video, !track.enabled);
+        // Track initial state
+        console.log(`Initial video track state: ${track.enabled ? 'enabled' : 'disabled'}`);
         
         // Monitor for changes
         track.addEventListener('mute', () => {
@@ -784,16 +698,21 @@ export default class WebRTC {
           this.updateVideoStatus(video, false);
         });
         
-        // Initial display
+        // Initial state logging
         if (!track.enabled) {
           this.updateVideoStatus(video, true);
         }
       });
     }
     
-    // Reposition all videos
+    // Reposition all videos using the current layout
     if (!isMyVideo) {
-      this.repositionPeerVideos();
+      this.repositionPeerVideos(this.currentLayout);
+    }
+    
+    // Update the video label if videos are hidden
+    if (!this.isVideoContainerVisible) {
+      this.updateVideoLabel();
     }
   }
 
@@ -847,7 +766,7 @@ export default class WebRTC {
       });
     }
     
-    // Update overlay positions after layout change
+    // Update name overlay positions after layout change
     setTimeout(() => {
       this.updateOverlayPositions(this.myVideo);
       
@@ -859,7 +778,12 @@ export default class WebRTC {
 
   // Reposition peer videos to left and right sides
   private repositionPeerVideos(layout: 'row' | 'column' = 'row') {
-    console.log('Repositioning peer videos');
+    console.log('Repositioning peer videos with layout:', layout);
+    
+    // Update the current layout if a specific layout is provided
+    if (layout) {
+      this.currentLayout = layout;
+    }
     
     // Get all peers from both maps
     const allPeers = [...this.peers.entries(), ...this.onCalledPeers.entries()];
@@ -954,7 +878,7 @@ export default class WebRTC {
       this.switchVideoLayout('row');
     }
     
-    // Update overlay positions after repositioning
+    // Update name overlay positions after repositioning
     setTimeout(() => {
       this.updateOverlayPositions(this.myVideo);
       allPeers.forEach(([id, { video }]) => {
@@ -980,8 +904,13 @@ export default class WebRTC {
       peer?.video.remove()
       this.peers.delete(sanitizedId)
       
-      // Reposition remaining videos
-      this.repositionPeerVideos()
+      // Reposition remaining videos with current layout
+      this.repositionPeerVideos(this.currentLayout)
+      
+      // Update the video label if videos are hidden
+      if (!this.isVideoContainerVisible) {
+        this.updateVideoLabel();
+      }
     }
   }
 
@@ -1000,8 +929,13 @@ export default class WebRTC {
       onCalledPeer?.video.remove()
       this.onCalledPeers.delete(sanitizedId)
       
-      // Reposition remaining videos
-      this.repositionPeerVideos()
+      // Reposition remaining videos with current layout
+      this.repositionPeerVideos(this.currentLayout)
+      
+      // Update the video label if videos are hidden
+      if (!this.isVideoContainerVisible) {
+        this.updateVideoLabel();
+      }
     }
   }
 
@@ -1148,7 +1082,12 @@ export default class WebRTC {
     // Create layout toggle button
     const layoutButton = document.createElement('div');
     layoutButton.className = 'control-icon layout-toggle';
-    layoutButton.innerHTML = '<i class="fas fa-th-list"></i>'; // Column layout icon
+    
+    // Set initial icon based on the current layout (consistency)
+    layoutButton.innerHTML = this.currentLayout === 'column' 
+      ? '<i class="fas fa-th"></i>' // Row layout icon (to switch to row)
+      : '<i class="fas fa-th-list"></i>'; // Column layout icon (to switch to column)
+    
     layoutButton.style.cursor = 'pointer';
     layoutButton.style.color = 'white';
     layoutButton.style.fontSize = '24px';
@@ -1157,20 +1096,48 @@ export default class WebRTC {
     layoutButton.style.display = 'flex';
     layoutButton.style.alignItems = 'center';
     layoutButton.style.justifyContent = 'center';
-    layoutButton.title = 'Toggle video layout';
-    
-    // Track current layout
-    let currentLayout: 'row' | 'column' = 'row';
+    layoutButton.title = this.currentLayout === 'column' 
+      ? 'Switch to row layout' 
+      : 'Switch to column layout';
     
     layoutButton.addEventListener('click', () => {
-      currentLayout = currentLayout === 'row' ? 'column' : 'row';
-      this.repositionPeerVideos(currentLayout);
+      this.currentLayout = this.currentLayout === 'row' ? 'column' : 'row';
+      this.repositionPeerVideos(this.currentLayout);
       
       // Update icon
-      if (currentLayout === 'column') {
-        layoutButton.innerHTML = '<i class="fas fa-th"></i>'; // Grid icon for row layout
+      if (this.currentLayout === 'column') {
+        layoutButton.innerHTML = '<i class="fas fa-th"></i>'; // Row layout icon
+        layoutButton.title = 'Switch to row layout';
       } else {
-        layoutButton.innerHTML = '<i class="fas fa-th-list"></i>'; // List icon for column layout
+        layoutButton.innerHTML = '<i class="fas fa-th-list"></i>'; // Column layout icon
+        layoutButton.title = 'Switch to column layout';
+      }
+    });
+    
+    // Create video visibility toggle button
+    const toggleVisibilityButton = document.createElement('div');
+    toggleVisibilityButton.className = 'control-icon visibility-toggle';
+    toggleVisibilityButton.innerHTML = '<i class="fas fa-eye-slash"></i>'; // Eye slash icon
+    toggleVisibilityButton.style.cursor = 'pointer';
+    toggleVisibilityButton.style.color = 'white';
+    toggleVisibilityButton.style.fontSize = '24px';
+    toggleVisibilityButton.style.width = '40px';
+    toggleVisibilityButton.style.height = '40px';
+    toggleVisibilityButton.style.display = 'flex';
+    toggleVisibilityButton.style.alignItems = 'center';
+    toggleVisibilityButton.style.justifyContent = 'center';
+    toggleVisibilityButton.title = 'Hide videos (Alt+V)';
+    
+    toggleVisibilityButton.addEventListener('click', () => {
+      const isVisible = this.toggleVideoContainerVisibility();
+      
+      // Update icon based on the current state
+      if (isVisible) {
+        toggleVisibilityButton.innerHTML = '<i class="fas fa-eye-slash"></i>';
+        toggleVisibilityButton.title = 'Hide videos (Alt+V)';
+      } else {
+        toggleVisibilityButton.innerHTML = '<i class="fas fa-eye"></i>';
+        toggleVisibilityButton.title = 'Show videos (Alt+V)';
       }
     });
     
@@ -1205,6 +1172,7 @@ export default class WebRTC {
     this.controlsContainer.appendChild(micButton)
     this.controlsContainer.appendChild(videoButton)
     this.controlsContainer.appendChild(layoutButton)
+    this.controlsContainer.appendChild(toggleVisibilityButton)
     this.controlsContainer.appendChild(cutButton)
     
     // Add Font Awesome if not already included
@@ -1226,5 +1194,138 @@ export default class WebRTC {
       
       console.log('Added Font Awesome stylesheet to document head');
     }
+  }
+
+  // Helper method to update the video label content
+  private updateVideoLabel() {
+    const videoLabel = document.querySelector('.video-label') as HTMLElement;
+    if (!videoLabel) return;
+    
+    // Get all participants and format names
+    const allPeers = [...this.peers.entries(), ...this.onCalledPeers.entries()];
+    let participantNames = '';
+    
+    // Count total participants (including myself)
+    const totalParticipants = allPeers.length + 1;
+    
+    // Add my name first
+    participantNames += `${this.myName} (You)`;
+    
+    // Add peer names
+    if (allPeers.length > 0) {
+      participantNames += ` + ${allPeers.length} `;
+      if (allPeers.length === 1) {
+        participantNames += `(${allPeers[0][1].name})`;
+      } else {
+        participantNames += 'others';
+      }
+    }
+    
+    // Update the label content with participant count badge
+    videoLabel.innerHTML = `
+      <i class="fas fa-video"></i> 
+      <span>${participantNames}</span>
+      <span class="participant-count" style="
+        display: inline-block;
+        background-color: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+        text-align: center;
+        line-height: 18px;
+        margin-left: 5px;
+      ">${totalParticipants}</span>
+    `;
+    
+    // Add tooltip with full names if truncated
+    videoLabel.title = `Video participants (${totalParticipants}): ${participantNames}`;
+  }
+
+  // Method to toggle video container visibility
+  public toggleVideoContainerVisibility(show?: boolean) {
+    const videoRowContainer = document.querySelector('.video-row-container') as HTMLElement;
+    if (!videoRowContainer) return;
+    
+    // Determine whether to show or hide
+    const shouldShow = show !== undefined ? show : !this.isVideoContainerVisible;
+    this.isVideoContainerVisible = shouldShow;
+    
+    if (shouldShow) {
+      // Show the video container
+      videoRowContainer.style.display = 'flex';
+      
+      // Remove the label if it exists
+      const videoLabel = document.querySelector('.video-label');
+      if (videoLabel) videoLabel.remove();
+      
+      // Show all name overlays
+      document.querySelectorAll('[class^="name-overlay-"]').forEach((overlay) => {
+        (overlay as HTMLElement).style.display = 'block';
+      });
+    } else {
+      // Hide the video container
+      videoRowContainer.style.display = 'none';
+      
+      // Hide all name overlays
+      document.querySelectorAll('[class^="name-overlay-"]').forEach((overlay) => {
+        (overlay as HTMLElement).style.display = 'none';
+      });
+      
+      // Create or update a small label to show instead
+      let videoLabel = document.querySelector('.video-label') as HTMLElement;
+      if (!videoLabel) {
+        videoLabel = document.createElement('div');
+        videoLabel.className = 'video-label';
+        videoLabel.style.position = 'fixed';
+        videoLabel.style.right = '10px';
+        videoLabel.style.top = '10px';
+        videoLabel.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        videoLabel.style.color = 'white';
+        videoLabel.style.padding = '5px 10px';
+        videoLabel.style.borderRadius = '4px';
+        videoLabel.style.fontSize = '12px';
+        videoLabel.style.zIndex = '2';
+        videoLabel.style.cursor = 'pointer';
+        videoLabel.style.maxWidth = '200px';
+        videoLabel.style.whiteSpace = 'nowrap';
+        videoLabel.style.overflow = 'hidden';
+        videoLabel.style.textOverflow = 'ellipsis';
+        videoLabel.style.display = 'flex';
+        videoLabel.style.alignItems = 'center';
+        videoLabel.style.gap = '5px';
+        videoLabel.style.opacity = '0';
+        videoLabel.style.transform = 'translateY(-10px)';
+        videoLabel.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        
+        // Add tooltip showing keyboard shortcut
+        videoLabel.title = 'Click to show videos (Alt+V)';
+        
+        videoLabel.addEventListener('click', () => {
+          this.toggleVideoContainerVisibility(true);
+          
+          // Update button state
+          const toggleVisibilityButton = document.querySelector('.visibility-toggle') as HTMLElement;
+          if (toggleVisibilityButton) {
+            toggleVisibilityButton.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            toggleVisibilityButton.title = 'Hide videos (Alt+V)';
+          }
+        });
+        
+        document.body.appendChild(videoLabel);
+        
+        // Trigger animation after a small delay
+        setTimeout(() => {
+          videoLabel.style.opacity = '1';
+          videoLabel.style.transform = 'translateY(0)';
+        }, 50);
+      }
+      
+      // Update the video label content
+      this.updateVideoLabel();
+    }
+    
+    // Return current state
+    return this.isVideoContainerVisible;
   }
 }
