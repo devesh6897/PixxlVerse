@@ -99,7 +99,7 @@ const MessageWrapper = styled.div`
 
 const InputWrapper = styled.form`
   box-shadow: 10px 10px 10px #00000018;
-  border: 1px solid #42eacb;
+  border: 1px solid #b87efa;
   border-radius: 0px 0px 10px 10px;
   display: flex;
   flex-direction: row;
