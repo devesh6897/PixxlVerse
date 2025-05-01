@@ -6,8 +6,7 @@ import phaserGame from '../PhaserGame'
 import Bootstrap from '../scenes/Bootstrap'
 
 export function getInitialBackgroundMode() {
-  const currentHour = new Date().getHours()
-  return currentHour > 6 && currentHour <= 18 ? BackgroundMode.DAY : BackgroundMode.NIGHT
+  return BackgroundMode.NIGHT
 }
 
 export const userSlice = createSlice({
