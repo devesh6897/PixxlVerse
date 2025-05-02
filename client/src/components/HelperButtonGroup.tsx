@@ -157,7 +157,7 @@ export default function HelperButtonGroup() {
                 <strong>W, A, S, D or arrow keys</strong> to move
               </li>
               <li>
-                <strong>E</strong> to sit down (when facing a chair)
+                <strong>E</strong> to Play Games 
               </li>
               <li>
                 <strong>R</strong> to use computer to screen share (when facing a computer)
