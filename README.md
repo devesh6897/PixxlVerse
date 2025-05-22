@@ -1,16 +1,23 @@
-# Project Setup & Run Guide
+# Full Stack Project - Setup & Run Guide
 
-## 📦 Install Dependencies
+This guide will help you set up and run the project, including both the main server and the client (frontend).
 
-Install dependencies in both the root and the client folders:
+---
+
+## 📦 Step 1: Install Dependencies
+
+Install dependencies in both the root and the `client` folder.
 
 ```bash
-# Install dependencies in the root folder
+# In the root folder
 yarn install
 
-# Move into the client folder and install its dependencies
+# Navigate to the client folder
 cd client
-yarn install
 
-# Go back to the root folder if needed
-cd ..
+# In the client folder
+yarn install
+yarn dev
+
+#Start the Server (Backend)
+yarn start
