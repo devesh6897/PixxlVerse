@@ -1,6 +1,4 @@
-# Full Stack Project - Setup & Run Guide
-
-This guide will help you set up and run the project, including both the main server and the client (frontend).
+# PIXELVERSE
 
 ---
 
